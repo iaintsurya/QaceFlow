@@ -1,120 +1,167 @@
 # QaceFlow
 
-**An open-source security investigation workbench.**
+**An open-source security investigation workbench for explainable detections and incident correlation.**
 
-QaceFlow turns security events into explainable detections and candidate incidents. This first milestone uses simulated telemetry so the complete workflow can be explored safely on a local machine.
+QaceFlow is a local-first cybersecurity project designed to explore how security events can be transformed into actionable alerts and candidate incidents. It combines simulated authentication telemetry, rule-based detection, basic alert correlation, and an interactive investigation dashboard.
 
-## What's included
+> **Project status:** Early development · v0.1.0  
+> **Environment:** Local development with synthetic telemetry
 
-- React + TypeScript dashboard (Vite)
-- Python + FastAPI API
-- SQLite storage
-- Deterministic simulated suspicious-login scenario
-- Threshold detection for repeated failed logins
-- Sequence detection for failures followed by a success
-- Basic alert correlation with explicit match reasons
-- Event and alert inspection in the dashboard
+## Overview
 
-> This is an early development scaffold, not a production SIEM. Use simulated data only. The API has no authentication and must remain bound to localhost.
+Security investigations often involve connecting individual events, understanding why detection rules fired, and documenting the evidence behind an incident. QaceFlow explores this workflow through a small, transparent, and reproducible security lab.
 
-## Requirements
+The current version generates a simulated authentication scenario, evaluates detection rules, correlates related alerts, and presents the results in a web dashboard.
 
-- Python 3.11+
-- Node.js 20+ and npm
+## Features
 
-## Run the backend
+- **Simulated telemetry:** Generate a repeatable sequence of authentication failures followed by a successful login.
+- **Rule-based detection:** Identify repeated authentication failures and failures followed by success.
+- **Alert correlation:** Group related alerts sharing the same host and account into a candidate incident.
+- **Evidence references:** Connect alerts and candidate incidents to the event IDs that support them.
+- **Investigation dashboard:** Inspect event sequences, alert summaries, severities, and candidate incidents.
+- **Local-first development:** Run the frontend and API on your own machine using synthetic data.
 
-From the project root:
+## Architecture
 
-```bash
-cd backend
-python -m venv .venv
+```text
+Synthetic authentication scenario
+              |
+              v
+       Event generation
+              |
+              v
+       Detection engine
+              |
+              v
+         Alert records
+              |
+              v
+      Correlation engine
+              |
+              v
+      Candidate incident
+              |
+              v
+       React dashboard
+              |
+              v
+       Analyst review
 ```
 
-Activate the virtual environment:
+### Technology stack
 
-**Windows PowerShell**
+| Component | Technology |
+|---|---|
+| Frontend | React, TypeScript, Vite |
+| Backend | Python, FastAPI |
+| Data storage | SQLite |
+| API documentation | OpenAPI / Swagger UI |
+| Version control | Git and GitHub |
+
+## Detection rules
+
+| Rule ID | Detection | Purpose |
+|---|---|---|
+| `AUTH-001` | Repeated authentication failures | Detect five or more failures for the same host and account within a 120-second window. |
+| `AUTH-002` | Failures followed by success | Identify a successful login preceded by failures for the same host and account within five minutes. |
+
+These rules are intentionally simple and explainable. A rule match is an investigative signal, not proof of malicious activity.
+
+## Getting started
+
+### Prerequisites
+
+- Python 3.11 or newer
+- Node.js 20 or newer
+- npm
+- Git
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/iaintsurya/QaceFlow.git
+cd QaceFlow
+```
+
+### 2. Set up the backend
+
 ```powershell
-.venv\Scripts\Activate.ps1
+cd backend
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --reload
 ```
 
-**macOS/Linux**
-```bash
-source .venv/bin/activate
-```
+If the `python` command is unavailable, use `.\.venv\Scripts\python.exe` in its place.
 
-Install and run:
+The API runs at `http://127.0.0.1:8000`.
 
-```bash
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
+Interactive API documentation: `http://127.0.0.1:8000/docs`
 
-API: http://127.0.0.1:8000  
-Interactive API docs: http://127.0.0.1:8000/docs
+### 3. Set up the frontend
 
-## Run the frontend
+Open a second terminal at the repository root and run:
 
-In a second terminal, from the project root:
-
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite, usually http://localhost:5173.
+Open the local URL printed by Vite, usually `http://localhost:5173`.
 
-## Try it
+### 4. Run the demo
 
-1. Start the backend and frontend.
-2. Click **Run suspicious-login scenario**.
-3. Review the generated events and alerts.
-4. Inspect the alert explanations and the candidate incident correlation.
+1. Ensure both the backend and frontend are running.
+2. Open the QaceFlow dashboard.
+3. Select **Run demo scenario**.
+4. Review the generated events, detection alerts, and candidate incident.
 
-The scenario is deterministic: replaying it resets the demo dataset and generates the same event IDs and detection outcomes.
+Replaying the scenario resets the local demo dataset and regenerates the synthetic events.
 
-## Initial API endpoints
+## API endpoints
 
-- `GET /api/health`
-- `GET /api/events`
-- `GET /api/alerts`
-- `GET /api/incidents`
-- `POST /api/scenarios/suspicious-login/replay`
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/health` | Check API health |
+| GET | `/api/events` | List generated events |
+| GET | `/api/alerts` | List detection alerts |
+| GET | `/api/incidents` | List candidate incidents |
+| POST | `/api/scenarios/suspicious-login/replay` | Replay the simulated scenario |
 
-## Architecture
+## Project roadmap
 
-```text
-React dashboard
-      |
-      v
-FastAPI routes
-      |
-      +--> Scenario runner
-      +--> Detection engine
-      +--> Correlation engine
-      |
-      v
-SQLite (events, alerts, incidents)
-```
+- [ ] Add automated tests for detection and correlation logic.
+- [ ] Build a dedicated incident investigation page.
+- [ ] Add persistent analyst notes and investigation findings.
+- [ ] Improve evidence timelines and event inspection.
+- [ ] Add investigation report export.
+- [ ] Support validated imports of authorized, sanitized telemetry.
+- [ ] Add versioned detection-rule definitions.
+- [ ] Improve API security and deployment readiness.
 
-## Current limitations
+## Security and limitations
 
-- Only one simulated scenario is included.
-- Detection rules are implemented in Python rather than loaded from YAML yet.
-- Correlation is intentionally simple and deterministic.
-- No authentication, multi-user support, live telemetry, automated response, or public deployment.
-- The sample IP is from a documentation-only address range.
+QaceFlow is an educational development project, not a production SIEM or incident-response platform.
 
-## Planned milestones
+- The included scenario uses synthetic telemetry.
+- Detection and correlation logic is intentionally basic.
+- The development API does not include authentication.
+- The replay endpoint resets the local demo dataset.
+- The application should remain on localhost and must not be exposed publicly in its current state.
 
-1. Add tests for detection thresholds and sequence rules.
-2. Add an evidence-linked investigation casebook.
-3. Add filtering, timeline views, and report export.
-4. Move detection definitions into versioned rule files.
-5. Add import validation for authorized, sanitized CSV/JSON telemetry.
-6. Harden before considering any network-accessible deployment.
+Do not import sensitive logs or real incident evidence into this development version.
+
+## Contributing
+
+Contributions, bug reports, and suggestions are welcome. Please open an issue to discuss significant changes before submitting a pull request.
 
 ## License
 
-MIT — see `LICENSE`.
+Released under the [MIT License](LICENSE).
+
+---
+
+**QaceFlow** — From security signals to evidence-backed investigations.
