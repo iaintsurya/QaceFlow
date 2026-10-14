@@ -1,5 +1,5 @@
 
-from app.engine import detect
+from app.engine import detect, correlate
 
 
 def make_event(event_id, seconds, event_type, user="demo-user"):
@@ -70,3 +70,50 @@ def test_four_failed_logins_do_not_trigger_auth001():
     alerts = detect(events)
 
     assert not any(alert["rule_id"] == "AUTH-001" for alert in alerts)
+
+
+def make_alert(alert_id, rule_id, host, user, severity, event_ids):
+    return {
+        "id": alert_id,
+        "rule_id": rule_id,
+        "title": f"Test alert {alert_id}",
+        "severity": severity,
+        "matched_event_ids": event_ids,
+        "entity": {"host": host, "user": user},
+    }
+
+
+def test_related_alerts_create_candidate_incident():
+    alerts = [
+        make_alert("ALT-1", "AUTH-001", "host-1", "alice", "medium", ["EVT-1", "EVT-2"]),
+        make_alert("ALT-2", "AUTH-002", "host-1", "alice", "high", ["EVT-2", "EVT-3"]),
+    ]
+
+    incidents = correlate(alerts)
+
+    assert len(incidents) == 1
+    assert incidents[0]["status"] == "open"
+    assert incidents[0]["severity"] == "high"
+    assert incidents[0]["alert_ids"] == ["ALT-1", "ALT-2"]
+
+
+def test_incident_preserves_unique_evidence_references():
+    alerts = [
+        make_alert("ALT-1", "AUTH-001", "host-1", "alice", "medium", ["EVT-1", "EVT-2"]),
+        make_alert("ALT-2", "AUTH-002", "host-1", "alice", "high", ["EVT-2", "EVT-3"]),
+    ]
+
+    incidents = correlate(alerts)
+
+    assert incidents[0]["event_ids"] == ["EVT-1", "EVT-2", "EVT-3"]
+
+
+def test_unrelated_alerts_are_not_correlated():
+    alerts = [
+        make_alert("ALT-1", "AUTH-001", "host-1", "alice", "medium", ["EVT-1"]),
+        make_alert("ALT-2", "AUTH-002", "host-2", "bob", "high", ["EVT-2"]),
+    ]
+
+    incidents = correlate(alerts)
+
+    assert incidents == []
