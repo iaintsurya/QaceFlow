@@ -345,3 +345,43 @@ def update_incident_status(
         "incident_id": incident_id,
         "status": status,
     }
+
+
+@app.get("/api/incidents/{incident_id}/report")
+def export_incident_report(incident_id: str) -> dict[str, Any]:
+    """Return a complete, database-backed snapshot for an investigation report."""
+    with connect() as db:
+        incident_row = db.execute(
+            "SELECT * FROM incidents WHERE id = ?", (incident_id,)
+        ).fetchone()
+        if incident_row is None:
+            raise HTTPException(status_code=404, detail="Incident not found")
+
+        incident = decode_incident(incident_row)
+        note_row = db.execute(
+            "SELECT notes, updated_at FROM incident_notes WHERE incident_id = ?",
+            (incident_id,),
+        ).fetchone()
+
+        alert_rows = []
+        for alert_id in incident["alert_ids"]:
+            row = db.execute("SELECT * FROM alerts WHERE id = ?", (alert_id,)).fetchone()
+            if row is not None:
+                alert_rows.append(decode_alert(row))
+
+        event_rows = []
+        for event_id in incident["event_ids"]:
+            row = db.execute("SELECT payload FROM events WHERE event_id = ?", (event_id,)).fetchone()
+            if row is not None:
+                event_rows.append(json.loads(row["payload"]))
+
+    event_rows.sort(key=lambda item: item.get("timestamp", ""))
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "incident": incident,
+        "notes": note_row["notes"] if note_row else "",
+        "notes_updated_at": note_row["updated_at"] if note_row else None,
+        "alerts": alert_rows,
+        "events": event_rows,
+        "disclaimer": "QaceFlow demo report. Correlated activity is a candidate for investigation, not proof of compromise. Demo telemetry may be synthetic.",
+    }

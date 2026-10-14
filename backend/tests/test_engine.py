@@ -117,3 +117,47 @@ def test_unrelated_alerts_are_not_correlated():
     incidents = correlate(alerts)
 
     assert incidents == []
+
+
+
+def test_correlation_groups_alerts_for_same_host_and_user():
+    alerts = [
+        {
+            "id": "ALT-1", "rule_id": "AUTH-001", "severity": "medium",
+            "matched_event_ids": ["EVT-1"], "entity": {"host": "host-a", "user": "alice"},
+        },
+        {
+            "id": "ALT-2", "rule_id": "AUTH-002", "severity": "high",
+            "matched_event_ids": ["EVT-2", "EVT-3"], "entity": {"host": "host-a", "user": "alice"},
+        },
+    ]
+
+    incidents = correlate(alerts)
+
+    assert len(incidents) == 1
+    assert incidents[0]["alert_ids"] == ["ALT-1", "ALT-2"]
+    assert incidents[0]["event_ids"] == ["EVT-1", "EVT-2", "EVT-3"]
+    assert incidents[0]["severity"] == "high"
+    assert "not proof" in incidents[0]["correlation_reason"]
+
+
+def test_correlation_does_not_group_different_accounts():
+    alerts = [
+        {
+            "id": "ALT-1", "rule_id": "AUTH-001", "severity": "medium",
+            "matched_event_ids": ["EVT-1"], "entity": {"host": "host-a", "user": "alice"},
+        },
+        {
+            "id": "ALT-2", "rule_id": "AUTH-002", "severity": "high",
+            "matched_event_ids": ["EVT-2"], "entity": {"host": "host-a", "user": "bob"},
+        },
+    ]
+
+    assert correlate(alerts) == []
+
+
+def test_correlation_requires_two_alerts():
+    assert correlate([{
+        "id": "ALT-1", "rule_id": "AUTH-001", "severity": "medium",
+        "matched_event_ids": ["EVT-1"], "entity": {"host": "host-a", "user": "alice"},
+    }]) == []
