@@ -21,4 +21,5 @@ dist/
 .vscode/
 .idea/
 
-frontend/tsconfig.tsbuildinfo
+# TypeScript incremental build metadata
+*.tsbuildinfo

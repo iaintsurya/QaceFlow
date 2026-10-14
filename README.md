@@ -19,7 +19,10 @@ The current version generates a simulated authentication scenario, evaluates det
 - **Rule-based detection:** Identify repeated authentication failures and failures followed by success.
 - **Alert correlation:** Group related alerts sharing the same host and account into a candidate incident.
 - **Evidence references:** Connect alerts and candidate incidents to the event IDs that support them.
-- **Investigation dashboard:** Inspect event sequences, alert summaries, severities, and candidate incidents.
+- **Investigation workspace:** Inspect the incident rationale, related alerts, chronological evidence and raw event payloads.
+- **Persistent analyst notes:** Save investigation notes to SQLite and reload them later.
+- **Incident lifecycle:** Change incident status between open, investigating and closed.
+- **Report export:** Download a Markdown report containing incident metadata, analyst notes, related alerts and evidence references.
 - **Local-first development:** Run the frontend and API on your own machine using synthetic data.
 
 ## Architecture
@@ -47,6 +50,9 @@ Synthetic authentication scenario
               |
               v
        Analyst review
+              |
+              v
+   Persistent notes + report export
 ```
 
 ### Technology stack
