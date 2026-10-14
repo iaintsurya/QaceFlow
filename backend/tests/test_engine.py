@@ -46,3 +46,27 @@ def test_success_without_failures_does_not_trigger_auth002():
     alerts = detect(events)
 
     assert not any(alert["rule_id"] == "AUTH-002" for alert in alerts)
+
+
+def test_failures_for_different_users_are_not_combined():
+    events = [
+        make_event("EVT-1", 0, "authentication.failure", user="alice"),
+        make_event("EVT-2", 10, "authentication.failure", user="bob"),
+        make_event("EVT-3", 20, "authentication.failure", user="alice"),
+        make_event("EVT-4", 30, "authentication.failure", user="bob"),
+    ]
+
+    alerts = detect(events)
+
+    assert not any(alert["rule_id"] == "AUTH-001" for alert in alerts)
+
+
+def test_four_failed_logins_do_not_trigger_auth001():
+    events = [
+        make_event(f"EVT-{i}", i * 10, "authentication.failure")
+        for i in range(4)
+    ]
+
+    alerts = detect(events)
+
+    assert not any(alert["rule_id"] == "AUTH-001" for alert in alerts)
