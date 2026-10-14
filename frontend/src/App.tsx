@@ -4,6 +4,7 @@ import {
   CheckCircle2, ChevronRight, CircleDot, Clock3, Fingerprint, GitMerge,
   Play, RadioTower, Shield, ShieldAlert, Workflow, Zap
 } from 'lucide-react'
+import Investigation from './investigation'
 
 const API = 'http://127.0.0.1:8000'
 
@@ -25,7 +26,7 @@ function time(value: string) {
   return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'UTC', timeZoneName: 'short' })
 }
 function label(value: string) {
-  return value.replaceAll('.', ' ').replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())
+  return value.replace(/\./g, ' ').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
 }
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
   const [message, setMessage] = useState('Run a scenario to populate the investigation workspace.')
   const [selected, setSelected] = useState<string | null>(null)
   const [apiOnline, setApiOnline] = useState(false)
+  const [view, setView] = useState<'overview' | 'investigation'>('overview')
 
   async function refresh() {
     try {
@@ -69,7 +71,16 @@ export default function App() {
 
   const activeIncident = incidents.find(i => i.id === selected) ?? incidents[0]
   const selectedAlerts = activeIncident ? alerts.filter(a => activeIncident.alert_ids.includes(a.id)) : alerts
-
+  if (view === 'investigation' && activeIncident) {
+  return (
+    <Investigation
+      incident={activeIncident}
+      alerts={alerts}
+      events={events}
+      onBack={() => setView('overview')}
+    />
+  )
+}
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -156,6 +167,14 @@ export default function App() {
             {!activeIncident ? <Empty icon={<BookOpen size={20}/>} title="No casebook to inspect" text="A casebook will be available when a candidate incident exists."/> :
               <div className="casebook-body"><div className="casebook-summary"><div className="casebook-id">{activeIncident.id}</div><p>{activeIncident.correlation_reason}</p><div className="casebook-stats"><span><strong>{activeIncident.alert_ids.length}</strong> alerts</span><span><strong>{activeIncident.event_ids.length}</strong> evidence references</span><span><strong>{activeIncident.status}</strong> status</span></div></div><div className="casebook-next"><div className="next-icon"><CheckCircle2 size={18}/></div><div><strong>Next milestone</strong><p>Add persistent analyst notes, evidence annotations, investigation checklist, and report export.</p></div><ArrowUpRight size={17}/></div></div>}
           </section>
+          {activeIncident && (
+  <button
+    className="primary-btn"
+    onClick={() => setView('investigation')}
+  >
+    Open investigation →
+  </button>
+)}
           <footer><span>QaceFlow <b>·</b> v0.1.0</span><span><span className="status-dot"/> Local-first · Synthetic data</span><span>Built for explainable investigations</span></footer>
         </div>
       </main>
