@@ -3,21 +3,21 @@
 
 :root {
   font-family: 'Inter', sans-serif;
-  color: #e8e7df;
-  background: #111210;
+  color: #242722;
+  background: #FFFFFF;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 
-  --bg: #111210;
-  --panel: #171815;
-  --panel-raised: #1c1d19;
-  --line: #34352d;
-  --muted: #96978b;
-  --text: #e8e7df;
-  --lime: #c4f36b;
-  --amber: #e7ae60;
-  --red: #f08078;
+  --bg: #FFFFFF;
+  --panel: #F7F8F6;
+  --panel-raised: #FFFFFF;
+  --line: #E3E6DF;
+  --muted: #6B7068;
+  --text: #242722;
+  --lime: #527A37;
+  --amber: #925D12;
+  --red: #B42318;
   --mono: 'IBM Plex Mono', monospace;
 }
 
@@ -56,7 +56,7 @@ select:focus-visible {
 
 ::selection {
   background: var(--lime);
-  color: #111210;
+  color: #FFFFFF;
 }
 
 .app-shell {
@@ -70,7 +70,7 @@ select:focus-visible {
   padding: 27px 17px 18px;
   display: flex;
   flex-direction: column;
-  background: #151613;
+  background: #FFFFFF;
   border-right: 1px solid var(--line);
   z-index: 3;
 }
@@ -87,7 +87,7 @@ select:focus-visible {
   height: 38px;
   display: grid;
   place-items: center;
-  color: #151613;
+  color: #FFFFFF;
   background: var(--lime);
   border-radius: 3px;
   box-shadow: none;
@@ -135,14 +135,14 @@ select:focus-visible {
   padding: 12px 10px;
   border: 1px solid transparent;
   border-radius: 2px;
-  color: #aaa99e;
+  color: #6B7068;
   text-decoration: none;
   font-size: 12px;
   transition: background .15s, color .15s;
 }
 
 .nav-item:hover {
-  background: #20211c;
+  background: #F1F3EE;
   color: var(--text);
 }
 
@@ -342,7 +342,7 @@ h1 {
 
 .page-heading p {
   margin-bottom: 0;
-  color: #a6a69a;
+  color: #6B7068;
   font-size: 12px;
   line-height: 1.7;
 }
@@ -353,7 +353,7 @@ h1 {
   justify-content: center;
   gap: 9px;
   padding: 11px 15px;
-  color: #171811;
+  color: #242722;
   background: var(--lime);
   border: 1px solid var(--lime);
   border-radius: 2px;
@@ -366,7 +366,7 @@ h1 {
 
 .primary-btn:hover {
   color: var(--lime);
-  background: #25271e;
+  background: #F1F3EE;
   transform: none;
 }
 
@@ -381,7 +381,7 @@ h1 {
   gap: 12px;
   padding: 13px 15px;
   margin-bottom: 17px;
-  background: #1b1c17;
+  background: #F7F8F6;
   border: 1px solid var(--line);
   border-left: 3px solid var(--lime);
   border-radius: 0;
@@ -466,17 +466,17 @@ h1 {
 .metric-icon.blue,
 .metric-icon.violet {
   color: var(--lime);
-  background: #2a2d20;
+  background: #EDF3E7;
 }
 
 .metric-icon.amber {
   color: var(--amber);
-  background: #34291d;
+  background: #F7EBDD;
 }
 
 .metric-icon.teal {
-  color: #8bd8b0;
-  background: #202d24;
+  color: #527A37;
+  background: #E8F3EA;
 }
 
 .metric-detail {
@@ -494,7 +494,7 @@ h1 {
 
 .metric-label {
   margin-top: 4px;
-  color: #aaa99e;
+  color: #6B7068;
   font-size: 10px;
 }
 
@@ -526,7 +526,7 @@ h1 {
   padding: 11px 13px;
   margin-bottom: 23px;
   color: #b8b8aa;
-  background: #171815;
+  background: #F7F8F6;
   border: 1px solid var(--line);
   border-radius: 0;
   font-size: 10px;
@@ -599,7 +599,7 @@ h1 {
 
 .incident-row:hover,
 .incident-row.selected {
-  background: #202119;
+  background: #F4F5F2;
   border-left-color: var(--lime);
 }
 
@@ -657,26 +657,26 @@ h1 {
 
 .severity.medium {
   color: var(--amber);
-  background: #30261a;
-  border-color: #58452d;
+  background: #FFF3DE;
+  border-color: #D6B987;
 }
 
 .severity.high {
   color: var(--red);
-  background: #321f1c;
-  border-color: #67403a;
+  background: #FBE9E7;
+  border-color: #D9A6A0;
 }
 
 .severity.low {
-  color: #a8d99b;
-  background: #202b1d;
-  border-color: #45553a;
+  color: #527A37;
+  background: #EAF4E6;
+  border-color: #B8C9AE;
 }
 
 .mini-tag {
   padding: 4px 6px;
-  color: #aaa99e;
-  background: #292a23;
+  color: #6B7068;
+  background: #F0F1ED;
   border-radius: 2px;
   font-size: 9px;
 }
@@ -746,7 +746,7 @@ h1 {
 }
 
 .timeline-time {
-  color: #aaa99e;
+  color: #6B7068;
   font: 9px var(--mono);
 }
 
@@ -782,8 +782,8 @@ table {
 
 th {
   padding: 11px 15px;
-  color: #aaa99e;
-  background: #1c1d18;
+  color: #6B7068;
+  background: #F7F8F6;
   font: 9px var(--mono);
   letter-spacing: .5px;
   white-space: nowrap;
@@ -796,7 +796,7 @@ td {
 }
 
 tbody tr:hover {
-  background: #202119;
+  background: #F4F5F2;
 }
 
 .rule-id {
@@ -872,7 +872,7 @@ tbody tr:hover {
   align-items: flex-start;
   gap: 10px;
   padding: 13px;
-  background: #1c1d18;
+  background: #F7F8F6;
   border: 1px solid var(--line);
   border-radius: 2px;
 }
@@ -1084,4 +1084,49 @@ footer span:nth-child(2) {
   .connection {
     font-size: 9px;
   }
+}
+
+
+/* QaceFlow light forensic workspace theme */
+:root {
+  color-scheme: light;
+  color: #242722;
+  background: #ffffff;
+  --bg: #ffffff;
+  --panel: #ffffff;
+  --panel-raised: #f7f8f6;
+  --line: #e3e6df;
+  --muted: #6b7068;
+  --text: #242722;
+  --lime: #527a37;
+  --amber: #925d12;
+  --red: #b42318;
+  --mono: 'IBM Plex Mono', monospace;
+}
+html, body, #root { background: #fff !important; color: #242722; }
+body { color: #242722; }
+.sidebar { background: #fbfcfa !important; border-right-color: #e3e6df !important; }
+.brand-mark { background: #527a37 !important; color: #fff !important; }
+.brand-name, .page-title, .metric-value, .panel-title, .casebook-title { color: #242722 !important; }
+.brand-name span, .nav-item.active, .primary-btn { color: #fff; }
+.brand-name span { color: #527a37 !important; }
+.nav-item { color: #5f655b !important; }
+.nav-item.active { background: #eaf1e5 !important; color: #315522 !important; }
+.metric-card, .panel, .casebook-panel, .event-panel, .alert-panel, .casebook-next {
+  background: #fff !important;
+  border-color: #e3e6df !important;
+  box-shadow: none !important;
+}
+.metric-card { border-radius: 4px !important; }
+.primary-btn { background: #527a37 !important; border-color: #527a37 !important; border-radius: 4px !important; }
+.secondary-btn { background: #fff; color: #343a30; border: 1px solid #d5d9d1; border-radius: 4px; padding: 10px 13px; font-weight: 600; }
+.secondary-btn:hover { background: #f7f8f6; }
+input, textarea, select { background: #fff !important; color: #242722 !important; border-color: #d5d9d1 !important; }
+table, th, td { border-color: #e3e6df; }
+footer { border-color: #e3e6df !important; color: #6b7068 !important; }
+.iv-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+@media (max-width: 760px) {
+  .sidebar { position: static !important; width: auto !important; min-height: auto; padding: 14px !important; }
+  .app-shell { display: block !important; }
+  .main-content, main { margin-left: 0 !important; padding: 18px !important; }
 }

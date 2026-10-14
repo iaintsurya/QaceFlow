@@ -1,7 +1,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
-const API = 'http://127.0.0.1:8000'
+const API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 type EvidenceEvent = {
   event_id: string
@@ -52,6 +52,7 @@ export default function Investigation({
   const [loading, setLoading] = useState(true)
   const [savingNotes, setSavingNotes] = useState(false)
   const [savingStatus, setSavingStatus] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [selectedEvent, setSelectedEvent] =
@@ -158,6 +159,82 @@ export default function Investigation({
     }
   }
 
+  async function exportReport() {
+    setExporting(true)
+    setError('')
+    setMessage('')
+    try {
+      // Save the current editor contents before exporting the authoritative report.
+      const saveResponse = await fetch(
+        `${API}/api/incidents/${encodeURIComponent(incident.id)}/notes`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes }),
+        }
+      )
+      if (!saveResponse.ok) {
+        const problem = await saveResponse.json()
+        throw new Error(problem.detail ?? 'Could not save notes before export.')
+      }
+
+      const response = await fetch(
+        `${API}/api/incidents/${encodeURIComponent(incident.id)}/report`
+      )
+      const report = await response.json()
+      if (!response.ok) throw new Error(report.detail ?? 'Could not generate report.')
+
+      const lines = [
+        `# ${report.incident.title}`,
+        '',
+        `- Incident: ${report.incident.id}`,
+        `- Status: ${report.incident.status}`,
+        `- Severity: ${report.incident.severity}`,
+        `- Generated (UTC): ${report.generated_at}`,
+        `- Host: ${report.incident.entities?.host ?? 'Unknown'}`,
+        `- User: ${report.incident.entities?.user ?? 'Unknown'}`,
+        '',
+        '## Correlation rationale',
+        report.incident.correlation_reason || 'No rationale recorded.',
+        '',
+        '## Analyst notes',
+        report.notes || 'No analyst notes recorded.',
+        '',
+        '## Related alerts',
+        ...(report.alerts.length ? report.alerts.flatMap((alert: any) => [
+          `### ${alert.title} (${alert.id})`,
+          `- Rule: ${alert.rule_id}`,
+          `- Severity: ${alert.severity}`,
+          `- Summary: ${alert.summary}`,
+          `- Evidence: ${(alert.matched_event_ids ?? []).join(', ')}`,
+          '',
+        ]) : ['No related alerts found.', '']),
+        '## Evidence timeline',
+        ...(report.events.length ? report.events.map((event: any) =>
+          `- ${event.timestamp} — ${event.event_type} — event ${event.event_id} — user ${event.user ?? 'unknown'} — host ${event.host ?? 'unknown'} — source IP ${event.src_ip ?? 'unknown'}`
+        ) : ['No evidence events found.']),
+        '',
+        '## Important note',
+        report.disclaimer,
+        '',
+      ]
+      const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `qaceflow-${report.incident.id.toLowerCase()}-report.md`
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+      setMessage('Investigation report exported.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not export report.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   async function changeStatus(nextStatus: string) {
     const previousStatus = status
     setStatus(nextStatus)
@@ -193,22 +270,22 @@ export default function Investigation({
   }
 
   const panelStyle = {
-    background: '#111a29',
+    background: '#FFFFFF',
     border: '1px solid #26354a',
     borderRadius: 12,
     padding: 20,
     minWidth: 0,
   } as const
 
-  const mutedStyle = { color: '#91a6c4' } as const
+  const mutedStyle = { color: '#6B7068' } as const
 
   return (
     <main
       className="investigation-workspace"
       style={{
         minHeight: '100vh',
-        background: '#0b1220',
-        color: '#e8efff',
+        background: '#FFFFFF',
+        color: '#242722',
         padding: '28px',
         boxSizing: 'border-box',
       }}
@@ -269,8 +346,8 @@ export default function Investigation({
               padding: 10,
               marginLeft: 8,
               borderRadius: 8,
-              background: '#18263a',
-              color: '#e8efff',
+              background: '#F7F8F6',
+              color: '#242722',
               border: '1px solid #354963',
             }}
           >
@@ -288,7 +365,7 @@ export default function Investigation({
           style={{
             ...panelStyle,
             marginBottom: 20,
-            color: error ? '#ff9696' : '#9fc5ff',
+            color: error ? '#B42318' : '#527A37',
           }}
         >
           {loading ? 'Loading saved analyst notes…' : error || message}
@@ -345,8 +422,8 @@ export default function Investigation({
               padding: 12,
               margin: '8px 0 16px',
               borderRadius: 8,
-              background: '#0b1220',
-              color: '#e8efff',
+              background: '#FFFFFF',
+              color: '#242722',
               border: '1px solid #354963',
             }}
           />
@@ -376,7 +453,7 @@ export default function Investigation({
                     padding: 0,
                     border: 0,
                     background: 'transparent',
-                    color: '#9fc5ff',
+                    color: '#527A37',
                     cursor: 'pointer',
                     textAlign: 'left',
                   }}
@@ -394,7 +471,7 @@ export default function Investigation({
                     style={{
                       whiteSpace: 'pre-wrap',
                       overflowWrap: 'anywhere',
-                      background: '#0b1220',
+                      background: '#FFFFFF',
                       padding: 12,
                       borderRadius: 8,
                       fontSize: 12,
@@ -427,8 +504,8 @@ export default function Investigation({
               resize: 'vertical',
               padding: 14,
               borderRadius: 8,
-              background: '#0b1220',
-              color: '#e8efff',
+              background: '#FFFFFF',
+              color: '#242722',
               border: '1px solid #354963',
               font: 'inherit',
               lineHeight: 1.6,
@@ -446,13 +523,22 @@ export default function Investigation({
             }}
           >
             <span style={mutedStyle}>{notes.length} characters</span>
-            <button
-              className="primary-btn"
-              onClick={() => void saveNotes()}
-              disabled={loading || savingNotes}
-            >
-              {savingNotes ? 'Saving…' : 'Save analyst notes'}
-            </button>
+            <div className="iv-actions">
+              <button
+                className="secondary-btn"
+                onClick={() => void exportReport()}
+                disabled={loading || exporting || savingNotes}
+              >
+                {exporting ? 'Exporting…' : 'Export report (.md)'}
+              </button>
+              <button
+                className="primary-btn"
+                onClick={() => void saveNotes()}
+                disabled={loading || savingNotes}
+              >
+                {savingNotes ? 'Saving…' : 'Save analyst notes'}
+              </button>
+            </div>
           </div>
         </section>
       </div>

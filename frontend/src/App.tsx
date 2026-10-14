@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import Investigation from './investigation'
 
-const API = 'http://127.0.0.1:8000'
+const API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 type EventRecord = {
   event_id: string; timestamp: string; event_type: string; host: string
