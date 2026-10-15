@@ -20,7 +20,8 @@
 .cf-section { min-width: 0; padding-top: 12px; border-top: 2px solid var(--text); }
 .cf-section.wide { grid-column: 1 / -1; }
 .cf-section h2 { margin: 0 0 12px; font: 600 12px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; }
-.cf-reason { margin: 0 0 16px; line-height: 1.55; }
+.cf-reason { margin: 0 0 16px; font-size: 14px; line-height: 1.55; }
+.cf-alert > p { margin: 6px 0 0; font-size: 14px; line-height: 1.5; }
 
 .cf-alert { padding: 14px 0; border-top: 1px solid var(--line); }
 .cf-alert-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }

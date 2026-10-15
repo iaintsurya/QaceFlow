@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import './casefile.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
@@ -374,7 +374,8 @@ export default function Investigation({
                 </thead>
                 <tbody>
                   {evidence.map((event) => (
-                    <tr key={event.event_id}>
+                    <Fragment key={event.event_id}>
+                    <tr>
                       <td className="cf-mono">
                         {new Date(event.timestamp).toISOString().slice(11, 19)}
                       </td>
@@ -390,9 +391,6 @@ export default function Investigation({
                         >
                           {event.event_id}
                         </button>
-                        {selectedEvent === event.event_id && (
-                          <pre className="cf-raw">{JSON.stringify(event, null, 2)}</pre>
-                        )}
                       </td>
                       <td>
                         <span className={`event-type ${eventClass(event.event_type)}`}>
@@ -405,6 +403,14 @@ export default function Investigation({
                       </td>
                       <td className="cf-mono">{event.src_ip ?? '—'}</td>
                     </tr>
+                    {selectedEvent === event.event_id && (
+                      <tr>
+                        <td colSpan={5}>
+                          <pre className="cf-raw">{JSON.stringify(event, null, 2)}</pre>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
