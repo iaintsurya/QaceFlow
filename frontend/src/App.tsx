@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, BookOpen,
   CheckCircle2, ChevronRight, CircleDot, Clock3, Fingerprint, GitMerge,
-  Play, RadioTower, Shield, ShieldAlert, Workflow, Zap
+  Play, RadioTower, Search, Shield, ShieldAlert, Workflow, Zap
 } from 'lucide-react'
 import Investigation from './investigation'
 
@@ -16,6 +16,7 @@ type Alert = {
   id: string; rule_id: string; title: string; severity: string; summary: string
   matched_event_ids: string[]; entity: { host: string; user: string }; created_at: string
 }
+type Scenario = { id: string; name: string; description: string; event_count: number }
 type Incident = {
   id: string; title: string; status: string; severity: string
   alert_ids: string[]; event_ids: string[]; entities: { host: string; user: string }
@@ -38,6 +39,9 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null)
   const [apiOnline, setApiOnline] = useState(false)
   const [view, setView] = useState<'overview' | 'investigation'>('overview')
+  const [scenarios, setScenarios] = useState<Scenario[]>([])
+  const [selectedScenario, setSelectedScenario] = useState('suspicious-login')
+  const [eventQuery, setEventQuery] = useState('')
 
   async function refresh() {
     try {
@@ -52,24 +56,53 @@ export default function App() {
     }
   }
 
-  useEffect(() => { void refresh() }, [])
+  useEffect(() => {
+    void refresh()
+    fetch(`${API}/api/scenarios`)
+      .then(response => {
+        if (!response.ok) throw new Error('Scenario catalog unavailable')
+        return response.json()
+      })
+      .then((items: Scenario[]) => setScenarios(items))
+      .catch(() => setScenarios([
+        { id: 'suspicious-login', name: 'Suspicious login', description: 'Failures followed by success', event_count: 6 },
+        { id: 'repeated-failures', name: 'Repeated failures', description: 'Repeated failures without success', event_count: 5 },
+        { id: 'benign-login', name: 'Benign login activity', description: 'Ordinary successful logins', event_count: 3 },
+      ]))
+  }, [])
 
   async function replay() {
     setBusy(true)
     setMessage('Generating simulated telemetry and evaluating detections…')
     try {
-      const response = await fetch(`${API}/api/scenarios/suspicious-login/replay`, { method: 'POST' })
+      const response = await fetch(`${API}/api/scenarios/${selectedScenario}/replay`, { method: 'POST' })
       if (!response.ok) throw new Error('Scenario replay failed')
       const result = await response.json()
       await refresh()
       setSelected(result.incident_count ? 'INC-0001' : null)
-      setMessage(`Replay complete · ${result.event_count} events · ${result.alert_count} alerts · ${result.incident_count} candidate incidents`)
+      setMessage(`${selectedScenario} replay complete · ${result.event_count} events · ${result.alert_count} alerts · ${result.incident_count} candidate incidents. Replaying replaces the active demo dataset and clears its notes.`)
     } catch {
       setMessage('Could not reach the API. Start the backend at http://127.0.0.1:8000 and try again.')
     } finally { setBusy(false) }
   }
 
   const activeIncident = incidents.find(i => i.id === selected) ?? incidents[0]
+  const filteredEvents = events.filter(event => {
+  const query = eventQuery.trim().toLowerCase()
+
+  if (!query) return true
+
+  return [
+    event.event_id,
+    event.timestamp,
+    event.event_type,
+    event.host,
+    event.user,
+    event.src_ip ?? '',
+    event.details?.reason ?? '',
+    event.source,
+  ].some(value => value.toLowerCase().includes(query))
+})
   const selectedAlerts = activeIncident ? alerts.filter(a => activeIncident.alert_ids.includes(a.id)) : alerts
   if (view === 'investigation' && activeIncident) {
   return (
@@ -118,7 +151,15 @@ export default function App() {
               <h1>Investigation overview</h1>
               <p>Connect the signals. Understand the incident. Preserve the evidence.</p>
             </div>
-            <button className="primary-btn" onClick={replay} disabled={busy}><Play size={15} fill="currentColor" />{busy ? 'Running scenario…' : 'Run demo scenario'}</button>
+            <div className="heading-actions">
+              <label className="scenario-select-label">
+                <span>DEMO SCENARIO</span>
+                <select value={selectedScenario} onChange={event => setSelectedScenario(event.target.value)} disabled={busy}>
+                  {scenarios.map(scenario => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}
+                </select>
+              </label>
+              <button className="primary-btn" onClick={replay} disabled={busy}><Play size={15} fill="currentColor" />{busy ? 'Running scenario…' : 'Replay scenario'}</button>
+            </div>
           </section>
 
           <div className="notice"><div className="notice-icon"><Shield size={17} /></div><div><strong>Local simulation environment</strong><span>All current events are synthetic. No live endpoints or external telemetry are being monitored.</span></div><span className="notice-tag">SAFE LAB</span></div>
@@ -152,6 +193,33 @@ export default function App() {
                   </div>)}
                 </div>}
             </div>
+          </section>
+
+          <section className="panel event-explorer">
+            <div className="panel-header event-explorer-header">
+              <div><div className="panel-kicker">TELEMETRY / SEARCH</div><h2>Event explorer</h2></div>
+              <span className="count-pill">{filteredEvents.length} of {events.length} events</span>
+            </div>
+            <label className="event-search">
+              <Search size={17} />
+              <input
+                value={eventQuery}
+                onChange={event => setEventQuery(event.target.value)}
+                placeholder="Search event ID, user, host, source IP, type or reason…"
+                aria-label="Search events"
+              />
+              {eventQuery && <button type="button" className="clear-search" onClick={() => setEventQuery('')}>Clear</button>}
+            </label>
+            {filteredEvents.length === 0 ? <Empty icon={<Search size={20}/>} title={events.length ? 'No matching events' : 'No events to explore'} text={events.length ? 'Try another event ID, user, host, source IP or event type.' : 'Replay a scenario to populate the event explorer.'}/> :
+              <div className="table-wrap"><table><thead><tr><th>EVENT / TIME (UTC)</th><th>TYPE</th><th>USER / HOST</th><th>SOURCE IP</th><th>REASON</th></tr></thead><tbody>
+                {filteredEvents.map(event => <tr key={event.event_id}>
+                  <td><div className="rule-id">{event.event_id}</div><div className="table-sub">{time(event.timestamp)}</div></td>
+                  <td><span className={`event-type ${event.event_type.endsWith('success') ? 'event-success' : 'event-failure'}`}>{label(event.event_type)}</span></td>
+                  <td><div className="table-main">{event.user}</div><div className="table-sub">{event.host}</div></td>
+                  <td className="time-cell">{event.src_ip ?? '—'}</td>
+                  <td className="table-sub">{event.details?.reason ?? event.source}</td>
+                </tr>)}
+              </tbody></table></div>}
           </section>
 
           <section className="panel alerts-panel">
