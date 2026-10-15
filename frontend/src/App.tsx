@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, BookOpen,
+  Activity, AlertTriangle, ArrowUpRight, BookOpen,
   CheckCircle2, ChevronRight, CircleDot, Clock3, Fingerprint, GitMerge,
   Play, RadioTower, Search, Shield, ShieldAlert, Workflow, Zap
 } from 'lucide-react'
@@ -15,6 +15,7 @@ type EventRecord = {
 type Alert = {
   id: string; rule_id: string; title: string; severity: string; summary: string
   matched_event_ids: string[]; entity: { host: string; user: string }; created_at: string
+  threshold?: string | null; explanation?: string | null
 }
 type Scenario = { id: string; name: string; description: string; event_count: number }
 type Incident = {
@@ -43,16 +44,19 @@ export default function App() {
   const [selectedScenario, setSelectedScenario] = useState('suspicious-login')
   const [eventQuery, setEventQuery] = useState('')
 
-  async function refresh() {
+  async function refresh(): Promise<Incident[]> {
     try {
       const [e, a, i] = await Promise.all([
         fetch(`${API}/api/events`), fetch(`${API}/api/alerts`), fetch(`${API}/api/incidents`)
       ])
       if (!e.ok || !a.ok || !i.ok) throw new Error('API request failed')
-      setEvents(await e.json()); setAlerts(await a.json()); setIncidents(await i.json())
+      const nextIncidents: Incident[] = await i.json()
+      setEvents(await e.json()); setAlerts(await a.json()); setIncidents(nextIncidents)
       setApiOnline(true)
+      return nextIncidents
     } catch {
       setApiOnline(false)
+      return []
     }
   }
 
@@ -72,14 +76,18 @@ export default function App() {
   }, [])
 
   async function replay() {
+    if (
+      incidents.length > 0 &&
+      !window.confirm('Replaying replaces the active demo dataset and clears saved notes and incident status. Continue?')
+    ) return
     setBusy(true)
     setMessage('Generating simulated telemetry and evaluating detections…')
     try {
       const response = await fetch(`${API}/api/scenarios/${selectedScenario}/replay`, { method: 'POST' })
       if (!response.ok) throw new Error('Scenario replay failed')
       const result = await response.json()
-      await refresh()
-      setSelected(result.incident_count ? 'INC-0001' : null)
+      const freshIncidents = await refresh()
+      setSelected(freshIncidents[0]?.id ?? null)
       setMessage(`${selectedScenario} replay complete · ${result.event_count} events · ${result.alert_count} alerts · ${result.incident_count} candidate incidents. Replaying replaces the active demo dataset and clears its notes.`)
     } catch {
       setMessage('Could not reach the API. Start the backend at http://127.0.0.1:8000 and try again.')
@@ -123,11 +131,11 @@ export default function App() {
         </div>
         <div className="workspace-label">WORKSPACE</div>
         <nav>
-          <a className="nav-item active"><Activity size={17} /> Overview <span className="nav-count">01</span></a>
-          <a className="nav-item"><RadioTower size={17} /> Telemetry</a>
-          <a className="nav-item"><Zap size={17} /> Detections</a>
-          <a className="nav-item"><GitMerge size={17} /> Incidents <span className="nav-count">{incidents.length.toString().padStart(2, '0')}</span></a>
-          <a className="nav-item"><BookOpen size={17} /> Casebooks</a>
+          <a className="nav-item active" href="#overview"><Activity size={17} /> Overview</a>
+          <a className="nav-item" href="#events"><RadioTower size={17} /> Telemetry</a>
+          <a className="nav-item" href="#alerts"><Zap size={17} /> Detections</a>
+          <a className="nav-item" href="#incidents"><GitMerge size={17} /> Incidents <span className="nav-count">{incidents.length.toString().padStart(2, '0')}</span></a>
+          <a className="nav-item" href="#casebook"><BookOpen size={17} /> Casebook</a>
         </nav>
         <div className="sidebar-bottom">
           <div className="env-card">
@@ -146,7 +154,7 @@ export default function App() {
         </header>
 
         <div className="content">
-          <section className="page-heading">
+          <section className="page-heading" id="overview">
             <div><div className="eyebrow"><span className="eyebrow-line" /> SECURITY OPERATIONS / DEVELOPMENT</div>
               <h1>Investigation overview</h1>
               <p>Connect the signals. Understand the incident. Preserve the evidence.</p>
@@ -174,7 +182,7 @@ export default function App() {
           <div className="status-message"><span className="status-dot" />{message}</div>
 
           <section className="section-grid">
-            <div className="panel incidents-panel">
+            <div className="panel incidents-panel" id="incidents">
               <div className="panel-header"><div><div className="panel-kicker">INVESTIGATION QUEUE</div><h2>Candidate incidents</h2></div><span className="count-pill">{incidents.length} total</span></div>
               {incidents.length === 0 ? <Empty icon={<Shield size={20}/>} title="No incidents yet" text="Run the demo scenario to create a candidate incident from related alerts."/> :
                 incidents.map(incident => <button key={incident.id} className={`incident-row ${selected === incident.id ? 'selected' : ''}`} onClick={() => setSelected(incident.id)}>
@@ -195,7 +203,7 @@ export default function App() {
             </div>
           </section>
 
-          <section className="panel event-explorer">
+          <section className="panel event-explorer" id="events">
             <div className="panel-header event-explorer-header">
               <div><div className="panel-kicker">TELEMETRY / SEARCH</div><h2>Event explorer</h2></div>
               <span className="count-pill">{filteredEvents.length} of {events.length} events</span>
@@ -222,18 +230,18 @@ export default function App() {
               </tbody></table></div>}
           </section>
 
-          <section className="panel alerts-panel">
+          <section className="panel alerts-panel" id="alerts">
             <div className="panel-header"><div><div className="panel-kicker">DETECTION ENGINE</div><h2>Generated alerts</h2></div><span className="count-pill">{alerts.length} matches</span></div>
             {alerts.length === 0 ? <Empty icon={<Zap size={20}/>} title="No alerts generated" text="Run a scenario to evaluate authentication detection rules."/> :
               <div className="table-wrap"><table><thead><tr><th>RULE / DETECTION</th><th>SEVERITY</th><th>ENTITY</th><th>EVIDENCE</th><th>TRIGGERED (UTC)</th></tr></thead><tbody>
-                {alerts.map(alert => <tr key={alert.id}><td><div className="rule-id">{alert.rule_id}</div><div className="table-main">{alert.title}</div><div className="table-sub">{alert.summary}</div></td><td><span className={`severity ${alert.severity}`}>{alert.severity}</span></td><td><div className="table-main">{alert.entity.user}</div><div className="table-sub">{alert.entity.host}</div></td><td><span className="evidence-count">{alert.matched_event_ids.length} event refs</span></td><td className="time-cell">{time(alert.created_at)}</td></tr>)}
+                {alerts.map(alert => <tr key={alert.id}><td><div className="rule-id">{alert.rule_id}</div><div className="table-main">{alert.title}</div><div className="table-sub">{alert.summary}</div>{alert.threshold && <div className="table-sub">Threshold: {alert.threshold}</div>}</td><td><span className={`severity ${alert.severity}`}>{alert.severity}</span></td><td><div className="table-main">{alert.entity.user}</div><div className="table-sub">{alert.entity.host}</div></td><td><span className="evidence-count">{alert.matched_event_ids.length} event refs</span></td><td className="time-cell">{time(alert.created_at)}</td></tr>)}
               </tbody></table></div>}
           </section>
 
-          <section className="panel casebook-panel">
+          <section className="panel casebook-panel" id="casebook">
             <div className="panel-header"><div><div className="panel-kicker">CASEBOOK PREVIEW</div><h2>{activeIncident ? activeIncident.title : 'Investigation casebook'}</h2></div><span className="draft-label"><BookOpen size={13}/> FOUNDATION</span></div>
             {!activeIncident ? <Empty icon={<BookOpen size={20}/>} title="No casebook to inspect" text="A casebook will be available when a candidate incident exists."/> :
-              <div className="casebook-body"><div className="casebook-summary"><div className="casebook-id">{activeIncident.id}</div><p>{activeIncident.correlation_reason}</p><div className="casebook-stats"><span><strong>{activeIncident.alert_ids.length}</strong> alerts</span><span><strong>{activeIncident.event_ids.length}</strong> evidence references</span><span><strong>{activeIncident.status}</strong> status</span></div></div><div className="casebook-next"><div className="next-icon"><CheckCircle2 size={18}/></div><div><strong>Next milestone</strong><p>Add persistent analyst notes, evidence annotations, investigation checklist, and report export.</p></div><ArrowUpRight size={17}/></div></div>}
+              <div className="casebook-body"><div className="casebook-summary"><div className="casebook-id">{activeIncident.id}</div><p>{activeIncident.correlation_reason}</p><div className="casebook-stats"><span><strong>{activeIncident.alert_ids.length}</strong> alerts</span><span><strong>{activeIncident.event_ids.length}</strong> evidence references</span><span><strong>{activeIncident.status}</strong> status</span></div></div><div className="casebook-next"><div className="next-icon"><CheckCircle2 size={18}/></div><div><strong>Next step</strong><p>Open the investigation workspace to review evidence, save analyst notes, change status and export the report.</p></div><ArrowUpRight size={17}/></div></div>}
           </section>
           {activeIncident && (
   <button
@@ -251,7 +259,7 @@ export default function App() {
 }
 
 function Metric({icon,label,value,detail,tone}:{icon:React.ReactNode;label:string;value:number;detail:string;tone:string}) {
-  return <div className="metric-card"><div className="metric-top"><span className={`metric-icon ${tone}`}>{icon}</span><span className="metric-detail">{detail}</span></div><div className="metric-value">{value.toString().padStart(2,'0')}</div><div className="metric-label">{label}</div><div className="metric-bottom"><span className="metric-trend"><ArrowDownRight size={13}/> Live demo</span><span className="metric-neutral">Local data</span></div></div>
+  return <div className="metric-card"><div className="metric-top"><span className={`metric-icon ${tone}`}>{icon}</span><span className="metric-detail">{detail}</span></div><div className="metric-value">{value.toString().padStart(2,'0')}</div><div className="metric-label">{label}</div></div>
 }
 function Empty({icon,title,text}:{icon:React.ReactNode;title:string;text:string}) {
   return <div className="empty-state"><div className="empty-icon">{icon}</div><strong>{title}</strong><p>{text}</p></div>
