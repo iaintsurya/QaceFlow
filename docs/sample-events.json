@@ -1,0 +1,87 @@
+[
+  {
+    "event_id": "SAMPLE-001",
+    "timestamp": "2026-10-14T14:05:00Z",
+    "event_type": "authentication.failure",
+    "host": "srv-finance-02",
+    "user": "j.doe",
+    "src_ip": "198.51.100.23",
+    "details": {
+      "reason": "invalid_password"
+    }
+  },
+  {
+    "event_id": "SAMPLE-002",
+    "timestamp": "2026-10-14T14:05:10Z",
+    "event_type": "authentication.failure",
+    "host": "srv-finance-02",
+    "user": "j.doe",
+    "src_ip": "198.51.100.23",
+    "details": {
+      "reason": "invalid_password"
+    }
+  },
+  {
+    "event_id": "SAMPLE-003",
+    "timestamp": "2026-10-14T14:05:20Z",
+    "event_type": "authentication.failure",
+    "host": "srv-finance-02",
+    "user": "j.doe",
+    "src_ip": "198.51.100.23",
+    "details": {
+      "reason": "invalid_password"
+    }
+  },
+  {
+    "event_id": "SAMPLE-004",
+    "timestamp": "2026-10-14T14:05:30Z",
+    "event_type": "authentication.failure",
+    "host": "srv-finance-02",
+    "user": "j.doe",
+    "src_ip": "198.51.100.23",
+    "details": {
+      "reason": "invalid_password"
+    }
+  },
+  {
+    "event_id": "SAMPLE-005",
+    "timestamp": "2026-10-14T14:05:40Z",
+    "event_type": "authentication.failure",
+    "host": "srv-finance-02",
+    "user": "j.doe",
+    "src_ip": "198.51.100.23",
+    "details": {
+      "reason": "invalid_password"
+    }
+  },
+  {
+    "event_id": "SAMPLE-006",
+    "timestamp": "2026-10-14T14:05:50Z",
+    "event_type": "authentication.failure",
+    "host": "srv-finance-02",
+    "user": "j.doe",
+    "src_ip": "198.51.100.23",
+    "details": {
+      "reason": "invalid_password"
+    }
+  },
+  {
+    "event_id": "SAMPLE-007",
+    "timestamp": "2026-10-14T14:07:05Z",
+    "event_type": "authentication.success",
+    "host": "srv-finance-02",
+    "user": "j.doe",
+    "src_ip": "198.51.100.23",
+    "details": {
+      "reason": "valid_credentials"
+    }
+  },
+  {
+    "event_id": "SAMPLE-008",
+    "timestamp": "2026-10-14T14:20:00Z",
+    "event_type": "authentication.success",
+    "host": "srv-hr-01",
+    "user": "a.khan",
+    "src_ip": "192.0.2.15"
+  }
+]
