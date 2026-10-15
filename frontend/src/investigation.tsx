@@ -19,6 +19,8 @@ type Alert = {
   title: string
   severity: string
   summary?: string
+  threshold?: string | null
+  explanation?: string | null
   matched_event_ids: string[]
 }
 
@@ -178,51 +180,20 @@ export default function Investigation({
         throw new Error(problem.detail ?? 'Could not save notes before export.')
       }
 
+      // The server builds the Markdown report from the saved investigation.
       const response = await fetch(
-        `${API}/api/incidents/${encodeURIComponent(incident.id)}/report`
+        `${API}/api/incidents/${encodeURIComponent(incident.id)}/report.md`
       )
-      const report = await response.json()
-      if (!response.ok) throw new Error(report.detail ?? 'Could not generate report.')
+      if (!response.ok) {
+        const problem = await response.json().catch(() => ({}))
+        throw new Error(problem.detail ?? 'Could not generate report.')
+      }
 
-      const lines = [
-        `# ${report.incident.title}`,
-        '',
-        `- Incident: ${report.incident.id}`,
-        `- Status: ${report.incident.status}`,
-        `- Severity: ${report.incident.severity}`,
-        `- Generated (UTC): ${report.generated_at}`,
-        `- Host: ${report.incident.entities?.host ?? 'Unknown'}`,
-        `- User: ${report.incident.entities?.user ?? 'Unknown'}`,
-        '',
-        '## Correlation rationale',
-        report.incident.correlation_reason || 'No rationale recorded.',
-        '',
-        '## Analyst notes',
-        report.notes || 'No analyst notes recorded.',
-        '',
-        '## Related alerts',
-        ...(report.alerts.length ? report.alerts.flatMap((alert: any) => [
-          `### ${alert.title} (${alert.id})`,
-          `- Rule: ${alert.rule_id}`,
-          `- Severity: ${alert.severity}`,
-          `- Summary: ${alert.summary}`,
-          `- Evidence: ${(alert.matched_event_ids ?? []).join(', ')}`,
-          '',
-        ]) : ['No related alerts found.', '']),
-        '## Evidence timeline',
-        ...(report.events.length ? report.events.map((event: any) =>
-          `- ${event.timestamp} — ${event.event_type} — event ${event.event_id} — user ${event.user ?? 'unknown'} — host ${event.host ?? 'unknown'} — source IP ${event.src_ip ?? 'unknown'}`
-        ) : ['No evidence events found.']),
-        '',
-        '## Important note',
-        report.disclaimer,
-        '',
-      ]
-      const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' })
+      const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = url
-      anchor.download = `qaceflow-${report.incident.id.toLowerCase()}-report.md`
+      anchor.download = `qaceflow-${incident.id.toLowerCase()}-report.md`
       document.body.appendChild(anchor)
       anchor.click()
       anchor.remove()
@@ -271,7 +242,7 @@ export default function Investigation({
 
   const panelStyle = {
     background: '#FFFFFF',
-    border: '1px solid #26354a',
+    border: '1px solid #E3E6DF',
     borderRadius: 12,
     padding: 20,
     minWidth: 0,
@@ -348,7 +319,7 @@ export default function Investigation({
               borderRadius: 8,
               background: '#F7F8F6',
               color: '#242722',
-              border: '1px solid #354963',
+              border: '1px solid #E3E6DF',
             }}
           >
             <option value="open">Open</option>
@@ -392,7 +363,7 @@ export default function Investigation({
               <article
                 key={alert.id}
                 style={{
-                  borderTop: '1px solid #26354a',
+                  borderTop: '1px solid #E3E6DF',
                   padding: '14px 0',
                 }}
               >
@@ -401,6 +372,12 @@ export default function Investigation({
                   {alert.rule_id} · {alert.severity.toUpperCase()}
                 </p>
                 <p>{alert.summary}</p>
+                {alert.threshold && (
+                  <p style={mutedStyle}>Rule threshold: {alert.threshold}</p>
+                )}
+                {alert.explanation && (
+                  <p style={mutedStyle}>Why it matters: {alert.explanation}</p>
+                )}
                 <p style={mutedStyle}>
                   Evidence references: {alert.matched_event_ids.length}
                 </p>
@@ -424,7 +401,7 @@ export default function Investigation({
               borderRadius: 8,
               background: '#FFFFFF',
               color: '#242722',
-              border: '1px solid #354963',
+              border: '1px solid #E3E6DF',
             }}
           />
 
@@ -506,7 +483,7 @@ export default function Investigation({
               borderRadius: 8,
               background: '#FFFFFF',
               color: '#242722',
-              border: '1px solid #354963',
+              border: '1px solid #E3E6DF',
               font: 'inherit',
               lineHeight: 1.6,
             }}
