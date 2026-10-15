@@ -92,3 +92,10 @@ def test_report_labels_simulated_events_as_simulated():
                "host": "h", "src_ip": None, "source": "simulated_auth_log"}]
 
     assert "Simulated data" in build_markdown_report(snapshot(events=events))
+
+
+def test_report_timestamps_are_whole_second_utc():
+    report = build_markdown_report(snapshot(generated_at="2026-10-15T19:39:30.378448+00:00"))
+
+    assert "| Report generated (UTC) | 2026-10-15T19:39:30Z |" in report
+    assert "_Notes last saved (UTC): 2026-10-14T11:00:00Z_" in report

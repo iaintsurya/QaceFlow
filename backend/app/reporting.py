@@ -4,6 +4,7 @@ Pure functions only: the report is built from the authoritative snapshot that
 the API reads from the database, so the same input always gives the same text.
 """
 
+from datetime import datetime
 from typing import Any
 
 
@@ -11,6 +12,14 @@ def _cell(value: Any) -> str:
     """Make a value safe for a single Markdown table cell."""
     text = "" if value is None else str(value)
     return text.replace("\r", " ").replace("\n", " ").replace("|", "\\|").strip() or "—"
+
+
+def _utc(value: Any) -> str:
+    """Format an ISO timestamp as whole-second UTC, or fall back to the raw text."""
+    try:
+        return datetime.fromisoformat(str(value)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        return _cell(value)
 
 
 def _quote(text: str) -> str:
@@ -54,7 +63,7 @@ def build_markdown_report(snapshot: dict[str, Any]) -> str:
         f"| Account | {_cell(entities.get('user'))} |",
         f"| Alerts | {len(alerts)} |",
         f"| Evidence events | {len(events)} |",
-        f"| Report generated (UTC) | {_cell(snapshot.get('generated_at'))} |",
+        f"| Report generated (UTC) | {_utc(snapshot.get('generated_at'))} |",
         "",
         "## Why these alerts were grouped",
         "",
@@ -101,7 +110,7 @@ def build_markdown_report(snapshot: dict[str, Any]) -> str:
     if notes:
         lines += [_quote(notes), ""]
         if snapshot.get("notes_updated_at"):
-            lines += [f"_Notes last saved (UTC): {snapshot['notes_updated_at']}_", ""]
+            lines += [f"_Notes last saved (UTC): {_utc(snapshot['notes_updated_at'])}_", ""]
     else:
         lines += ["_No analyst notes were recorded for this incident._", ""]
 
