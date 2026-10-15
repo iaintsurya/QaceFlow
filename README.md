@@ -137,6 +137,7 @@ Replaying the scenario resets the local demo dataset and regenerates the synthet
 | GET | `/api/incidents` | List candidate incidents |
 | GET | `/api/rules` | List detection rules with thresholds and explanations |
 | GET | `/api/scenarios` | List the synthetic demo scenarios |
+| POST | `/api/events/import` | Validate and import a JSON array of events (all-or-nothing; replaces the active dataset) |
 | POST | `/api/scenarios/{scenario_id}/replay` | Replay a scenario (resets events, alerts, incidents and notes) |
 | GET / PUT | `/api/incidents/{id}/notes` | Read or save analyst notes (max 20,000 characters) |
 | PUT | `/api/incidents/{id}/status` | Set status to `open`, `investigating` or `closed` |
@@ -152,7 +153,7 @@ Alert IDs are unique and stable, in the form `ALT-<rule>-<nn>` (for example `ALT
 - [x] Add persistent analyst notes and investigation findings.
 - [ ] Improve evidence timelines and event inspection.
 - [x] Add investigation report export (Markdown).
-- [ ] Support validated imports of authorized, sanitized telemetry.
+- [x] Support validated imports of authorized, sanitized telemetry (JSON).
 - [ ] Add versioned detection-rule definitions.
 - [ ] Improve API security and deployment readiness.
 
@@ -193,3 +194,22 @@ Released under the [MIT License](LICENSE).
 All scenario data is synthetic. Replaying any scenario replaces the active demo dataset and clears notes attached to the previous demo incident. Export or copy any findings you need before replaying.
 
 The scenario catalog is available at `GET /api/scenarios`. Replay one with `POST /api/scenarios/{scenario_id}/replay`. The original `POST /api/scenarios/suspicious-login/replay` route remains supported.
+
+## Importing events
+
+Use the **Import events** panel in the UI, or call the API directly with a JSON body of the form `{"events": [...]}`. A ready-made example is in [`docs/sample-events.json`](docs/sample-events.json).
+
+| Field | Required | Notes |
+|---|---|---|
+| `event_id` | yes | Unique within the file |
+| `timestamp` | yes | ISO 8601; converted to UTC |
+| `event_type` | yes | Detections understand `authentication.failure` and `authentication.success`; other types are stored but not evaluated |
+| `host`, `user` | yes | Used for detection and correlation |
+| `src_ip` | no | Must be a valid IPv4 or IPv6 address |
+| `details` | no | Free-form object |
+
+Imports are all-or-nothing: if any record is invalid, nothing is stored and up to 25 problems are returned. Imported events are labelled `imported` and reports describe them as unverified. Up to 5,000 events can be imported at once. Importing replaces the active dataset and clears notes, like scenario replay.
+
+## Continuous integration
+
+GitHub Actions runs the backend tests and the frontend production build on every push and pull request (`.github/workflows/ci.yml`). Locally: `pip install -r backend/requirements-dev.txt && python -m pytest` in `backend`, and `npm run build` in `frontend`.
