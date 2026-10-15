@@ -11,14 +11,14 @@ QaceFlow is a local-first cybersecurity project designed to explore how security
 
 Security investigations often involve connecting individual events, understanding why detection rules fired, and documenting the evidence behind an incident. QaceFlow explores this workflow through a small, transparent, and reproducible security lab.
 
-The current version generates a simulated authentication scenario, evaluates detection rules, correlates related alerts, and presents the results in a web dashboard.
+The current version offers three deterministic synthetic authentication scenarios, evaluates detection rules, correlates related alerts, and presents results in a searchable web dashboard.
 
 ## Features
 
-- **Simulated telemetry:** Generate a repeatable sequence of authentication failures followed by a successful login.
+- **Scenario library:** Replay suspicious-login, repeated-failures and benign-login synthetic activity.
 - **Rule-based detection:** Identify repeated authentication failures and failures followed by success.
 - **Alert correlation:** Group related alerts sharing the same host and account into a candidate incident.
-- **Evidence references:** Connect alerts and candidate incidents to the event IDs that support them.
+- **Event explorer:** Search event IDs, timestamps, users, hosts, source IPs, event types and reasons.\n- **Evidence references:** Connect alerts and candidate incidents to the event IDs that support them.
 - **Investigation workspace:** Inspect the incident rationale, related alerts, chronological evidence and raw event payloads.
 - **Persistent analyst notes:** Save investigation notes to SQLite and reload them later.
 - **Incident lifecycle:** Change incident status between open, investigating and closed.
@@ -171,3 +171,15 @@ Released under the [MIT License](LICENSE).
 ---
 
 **QaceFlow** — From security signals to evidence-backed investigations.
+
+## Demo scenarios
+
+| Scenario | Expected result |
+| --- | --- |
+| `suspicious-login` | 6 events, 2 alerts, 1 candidate incident |
+| `repeated-failures` | 5 events, 1 alert, 0 incidents |
+| `benign-login` | 3 events, 0 alerts, 0 incidents |
+
+All scenario data is synthetic. Replaying any scenario replaces the active demo dataset and clears notes attached to the previous demo incident. Export or copy any findings you need before replaying.
+
+The scenario catalog is available at `GET /api/scenarios`. Replay one with `POST /api/scenarios/{scenario_id}/replay`. The original `POST /api/scenarios/suspicious-login/replay` route remains supported.

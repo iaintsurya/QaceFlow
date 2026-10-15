@@ -29,3 +29,18 @@ Do not create commits for changes that were not made. Do not commit `.venv`, `no
 ## Reset behavior
 
 The suspicious-login replay endpoint intentionally resets the demo events, alerts, incidents and notes to keep the sample deterministic. Treat this as a destructive demo action and communicate it clearly in the UI.
+
+
+## Demo scenarios
+
+Use the dashboard scenario selector to replay one of the supported synthetic scenarios:
+
+- `suspicious-login`: five failures followed by a success.
+- `repeated-failures`: five failures without a later success.
+- `benign-login`: ordinary successful logins.
+
+Replaying a scenario replaces the active dataset and deletes notes associated with the previous demo incident. This behavior keeps each run reproducible; save/export findings before switching scenarios.
+
+## Event explorer
+
+The event explorer searches the loaded scenario's event ID, timestamp, event type, host, user, source IP, source and reason. It operates on the currently loaded demo events and does not query external telemetry.
