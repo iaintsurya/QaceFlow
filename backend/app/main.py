@@ -5,15 +5,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from .engine import correlate, detect
+from .engine import RULES, correlate, detect
+from .reporting import build_markdown_report
 from .scenarios import SCENARIOS, get_scenario, list_scenarios
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DB_PATH = ROOT / "qaceflow.db"
+MAX_NOTES_LENGTH = 20_000
 
 app = FastAPI(
     title="QaceFlow API",
@@ -89,6 +91,7 @@ def startup() -> None:
 
 
 def decode_alert(row: sqlite3.Row) -> dict[str, Any]:
+    rule = RULES.get(row["rule_id"], {})
     return {
         "id": row["id"],
         "rule_id": row["rule_id"],
@@ -98,6 +101,8 @@ def decode_alert(row: sqlite3.Row) -> dict[str, Any]:
         "matched_event_ids": json.loads(row["matched_event_ids"]),
         "entity": json.loads(row["entity"]),
         "created_at": row["created_at"],
+        "threshold": rule.get("threshold"),
+        "explanation": rule.get("description"),
     }
 
 
@@ -151,6 +156,12 @@ def list_incidents() -> list[dict[str, Any]]:
         ).fetchall()
 
     return [decode_incident(row) for row in rows]
+
+
+@app.get("/api/rules")
+def list_rules() -> list[dict[str, Any]]:
+    """Describe every detection rule, its threshold and why it matters."""
+    return [{"id": rule_id, **rule} for rule_id, rule in sorted(RULES.items())]
 
 
 @app.get("/api/scenarios")
@@ -285,6 +296,12 @@ def save_incident_notes(
             detail="Notes must be text",
         )
 
+    if len(notes) > MAX_NOTES_LENGTH:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Notes are limited to {MAX_NOTES_LENGTH} characters",
+        )
+
     now = datetime.now(timezone.utc).isoformat()
 
     with connect() as db:
@@ -392,3 +409,16 @@ def export_incident_report(incident_id: str) -> dict[str, Any]:
         "events": event_rows,
         "disclaimer": "QaceFlow demo report. Correlated activity is a candidate for investigation, not proof of compromise. Demo telemetry may be synthetic.",
     }
+
+
+@app.get("/api/incidents/{incident_id}/report.md")
+def export_incident_report_markdown(incident_id: str) -> Response:
+    """Download the investigation report as a Markdown file."""
+    snapshot = export_incident_report(incident_id)
+    return Response(
+        content=build_markdown_report(snapshot),
+        media_type="text/markdown; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="qaceflow-{incident_id.lower()}-report.md"'
+        },
+    )
