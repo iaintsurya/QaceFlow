@@ -43,6 +43,7 @@ export default function App() {
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [selectedScenario, setSelectedScenario] = useState('suspicious-login')
   const [eventQuery, setEventQuery] = useState('')
+  const [eventType, setEventType] = useState('all')
   const [importText, setImportText] = useState('')
   const [importErrors, setImportErrors] = useState<string[]>([])
   const [importing, setImporting] = useState(false)
@@ -152,6 +153,7 @@ export default function App() {
   const filteredEvents = events.filter(event => {
   const query = eventQuery.trim().toLowerCase()
 
+  if (eventType !== 'all' && event.event_type !== eventType) return false
   if (!query) return true
 
   return [
@@ -198,7 +200,7 @@ export default function App() {
             <p>Simulated telemetry only</p>
             <small>No external data sources connected</small>
           </div>
-          <div className="profile-row"><div className="avatar">Q</div><div><strong>Analyst workspace</strong><small>Development build · v0.1.0</small></div></div>
+          <div className="profile-row"><div className="avatar">Q</div><div><strong>Analyst workspace</strong><small>Development build · v0.2.0</small></div></div>
         </div>
       </aside>
 
@@ -273,6 +275,13 @@ export default function App() {
               />
               {eventQuery && <button type="button" className="clear-search" onClick={() => setEventQuery('')}>Clear</button>}
             </label>
+            <label className="event-type-filter">
+              <span>EVENT TYPE</span>
+              <select value={eventType} onChange={event => setEventType(event.target.value)} aria-label="Filter by event type">
+                <option value="all">All types</option>
+                {Array.from(new Set(events.map(event => event.event_type))).sort().map(type => <option key={type} value={type}>{label(type)}</option>)}
+              </select>
+            </label>
             {filteredEvents.length === 0 ? <Empty icon={<Search size={20}/>} title={events.length ? 'No matching events' : 'No events to explore'} text={events.length ? 'Try another event ID, user, host, source IP or event type.' : 'Replay a scenario to populate the event explorer.'}/> :
               <div className="table-wrap"><table><thead><tr><th>EVENT / TIME (UTC)</th><th>TYPE</th><th>USER / HOST</th><th>SOURCE IP</th><th>REASON</th></tr></thead><tbody>
                 {filteredEvents.map(event => <tr key={event.event_id}>
@@ -316,7 +325,7 @@ export default function App() {
             </div>
             {importErrors.length > 0 && <ul className="import-errors" role="alert">{importErrors.map((error, index) => <li key={index}>{error}</li>)}</ul>}
           </section>
-          <footer><span>QaceFlow <b>·</b> v0.1.0</span><span><span className="status-dot"/> Local-first · {simulatedOnly ? 'Synthetic data' : 'Imported data'}</span><span>Built for explainable investigations</span></footer>
+          <footer><span>QaceFlow <b>·</b> v0.2.0</span><span><span className="status-dot"/> Local-first · {simulatedOnly ? 'Synthetic data' : 'Imported data'}</span><span>Built for explainable investigations</span></footer>
         </div>
       </main>
     </div>

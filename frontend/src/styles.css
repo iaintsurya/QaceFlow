@@ -1225,3 +1225,7 @@ footer { border-color: #e3e6df !important; color: #6b7068 !important; }
   margin: 12px 0 0; padding: 10px 14px 10px 28px; border: 1px solid var(--red); border-radius: 4px;
   color: var(--red); font-size: 13px; line-height: 1.5;
 }
+
+.event-type-filter { display: flex; align-items: center; gap: 10px; margin: 10px 0 14px; font: 600 11px var(--mono); letter-spacing: 0.08em; color: var(--muted); }
+.event-type-filter select { padding: 7px 10px; border: 1px solid var(--line); border-radius: 4px; background: #fff; color: var(--text); font: 13px 'Inter', sans-serif; }
+.event-type-filter select:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
