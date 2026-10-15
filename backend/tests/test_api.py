@@ -98,3 +98,55 @@ def test_replaying_scenario_explicitly_resets_saved_notes(local_database):
     assert result["reset_notes"] is True
     assert main.list_incidents() == []
     assert main.list_events()[0]["details"]["scenario"] == "benign-login"
+
+
+def test_alerts_include_rule_threshold_and_explanation(local_database):
+    alert = main.list_alerts()[0]
+
+    assert alert["threshold"]
+    assert alert["explanation"]
+
+
+def test_rules_endpoint_lists_documented_rules(local_database):
+    assert [rule["id"] for rule in main.list_rules()] == ["AUTH-001", "AUTH-002"]
+
+
+def test_oversized_notes_are_rejected(local_database):
+    incident_id = main.list_incidents()[0]["id"]
+
+    with pytest.raises(HTTPException) as error:
+        main.save_incident_notes(incident_id, {"notes": "x" * (main.MAX_NOTES_LENGTH + 1)})
+
+    assert error.value.status_code == 413
+    assert main.get_incident_notes(incident_id)["notes"] == ""
+
+
+def test_markdown_report_download_contains_saved_notes(local_database):
+    incident_id = main.list_incidents()[0]["id"]
+    main.save_incident_notes(incident_id, {"notes": "Verified with the account owner."})
+    main.update_incident_status(incident_id, {"status": "investigating"})
+
+    response = main.export_incident_report_markdown(incident_id)
+    body = response.body.decode()
+
+    assert response.media_type.startswith("text/markdown")
+    assert "attachment" in response.headers["content-disposition"]
+    assert "Verified with the account owner." in body
+    assert "| Status | investigating |" in body
+    assert "ALT-AUTH-001-01" in body
+
+
+def test_markdown_report_for_missing_incident_returns_404(local_database):
+    with pytest.raises(HTTPException) as error:
+        main.export_incident_report_markdown("INC-NOT-REAL")
+
+    assert error.value.status_code == 404
+
+
+def test_notes_survive_a_simulated_restart(local_database):
+    incident_id = main.list_incidents()[0]["id"]
+    main.save_incident_notes(incident_id, {"notes": "Persisted."})
+
+    main.initialize()  # what the server does on startup; must not wipe data
+
+    assert main.get_incident_notes(incident_id)["notes"] == "Persisted."
