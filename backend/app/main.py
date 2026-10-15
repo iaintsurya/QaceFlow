@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from .engine import correlate, detect
-from .scenarios import suspicious_login_scenario
+from .scenarios import SCENARIOS, get_scenario, list_scenarios
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -153,13 +153,23 @@ def list_incidents() -> list[dict[str, Any]]:
     return [decode_incident(row) for row in rows]
 
 
-@app.post("/api/scenarios/suspicious-login/replay")
-def replay_scenario() -> dict[str, Any]:
-    events = suspicious_login_scenario()
+@app.get("/api/scenarios")
+def available_scenarios() -> list[dict[str, Any]]:
+    """List available deterministic synthetic demo scenarios."""
+    return list_scenarios()
+
+
+def _replay_scenario(scenario_id: str) -> dict[str, Any]:
+    try:
+        events = get_scenario(scenario_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
     alerts = detect(events)
     incidents = correlate(alerts)
 
-    # Reset the demo dataset for reproducible results.
+    # Replaying a scenario replaces the active demo dataset, including notes.
+    # This is intentional and is stated in the response so it is never implicit.
     with connect() as db:
         db.execute("DELETE FROM events")
         db.execute("DELETE FROM alerts")
@@ -170,19 +180,13 @@ def replay_scenario() -> dict[str, Any]:
             db.execute(
                 """
                 INSERT INTO events
-                (event_id, timestamp, event_type, host, user, source,
-                 src_ip, payload)
+                (event_id, timestamp, event_type, host, user, source, src_ip, payload)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    event["event_id"],
-                    event["timestamp"],
-                    event["event_type"],
-                    event["host"],
-                    event["user"],
-                    event["source"],
-                    event.get("src_ip"),
-                    json.dumps(event),
+                    event["event_id"], event["timestamp"], event["event_type"],
+                    event["host"], event["user"], event["source"],
+                    event.get("src_ip"), json.dumps(event),
                 ),
             )
 
@@ -195,14 +199,9 @@ def replay_scenario() -> dict[str, Any]:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    alert["id"],
-                    alert["rule_id"],
-                    alert["title"],
-                    alert["severity"],
-                    alert["summary"],
-                    json.dumps(alert["matched_event_ids"]),
-                    json.dumps(alert["entity"]),
-                    alert["created_at"],
+                    alert["id"], alert["rule_id"], alert["title"], alert["severity"],
+                    alert["summary"], json.dumps(alert["matched_event_ids"]),
+                    json.dumps(alert["entity"]), alert["created_at"],
                 ),
             )
 
@@ -215,24 +214,32 @@ def replay_scenario() -> dict[str, Any]:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    incident["id"],
-                    incident["title"],
-                    incident["status"],
-                    incident["severity"],
-                    json.dumps(incident["alert_ids"]),
-                    json.dumps(incident["event_ids"]),
-                    json.dumps(incident["entities"]),
+                    incident["id"], incident["title"], incident["status"],
+                    incident["severity"], json.dumps(incident["alert_ids"]),
+                    json.dumps(incident["event_ids"]), json.dumps(incident["entities"]),
                     incident["correlation_reason"],
                 ),
             )
 
     return {
-        "scenario": "suspicious-login",
+        "scenario": scenario_id,
         "event_count": len(events),
         "alert_count": len(alerts),
         "incident_count": len(incidents),
-        "message": "Scenario replayed. The local demo dataset was reset.",
+        "message": "Scenario replayed. The active demo dataset and its notes were reset.",
+        "reset_notes": True,
     }
+
+
+@app.post("/api/scenarios/suspicious-login/replay")
+def replay_scenario() -> dict[str, Any]:
+    """Backward-compatible endpoint for the original suspicious-login demo."""
+    return _replay_scenario("suspicious-login")
+
+
+@app.post("/api/scenarios/{scenario_id}/replay")
+def replay_named_scenario(scenario_id: str) -> dict[str, Any]:
+    return _replay_scenario(scenario_id)
 
 
 @app.get("/api/incidents/{incident_id}/notes")
