@@ -255,6 +255,30 @@ def _replay_scenario(scenario_id: str) -> dict[str, Any]:
     }
 
 
+@app.post("/api/events/import")
+def import_events(payload: dict[str, Any]) -> dict[str, Any]:
+    """Validate and import analyst-supplied events, replacing the active dataset."""
+    events, errors = validate_events(payload.get("events"))
+    if errors:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": f"Import rejected: {len(errors)} problem(s) found. Nothing was stored.",
+                "errors": errors[:25],
+                "error_count": len(errors),
+            },
+        )
+
+    alerts, incidents = _store_dataset(events)
+    return {
+        "event_count": len(events),
+        "alert_count": len(alerts),
+        "incident_count": len(incidents),
+        "message": "Events imported. The active dataset and its notes were replaced.",
+        "reset_notes": True,
+    }
+
+
 @app.post("/api/scenarios/suspicious-login/replay")
 def replay_scenario() -> dict[str, Any]:
     """Backward-compatible endpoint for the original suspicious-login demo."""
