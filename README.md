@@ -2,7 +2,7 @@
 
 **An open-source security investigation workbench for explainable detections and incident correlation.**
 
-QaceFlow is a local-first cybersecurity project designed to explore how security events can be transformed into actionable alerts and candidate incidents. It combines simulated authentication telemetry, rule-based detection, basic alert correlation, and an interactive investigation dashboard.
+QaceFlow is a local-first cybersecurity project designed to explore how security events can be transformed into actionable alerts and candidate incidents. It combines simulated authentication telemetry, rule-based detection, basic alert correlation, and a case-oriented investigation interface.
 
 > **Project status:** Early development · v0.2.0  
 > **Environment:** Local development with synthetic telemetry
@@ -11,35 +11,35 @@ QaceFlow is a local-first cybersecurity project designed to explore how security
 
 Security investigations often involve connecting individual events, understanding why detection rules fired, and documenting the evidence behind an incident. QaceFlow explores this workflow through a small, transparent, and reproducible security lab.
 
-The current version offers three deterministic synthetic authentication scenarios, evaluates detection rules, correlates related alerts, and presents results in a searchable web dashboard.
-
-## Screenshots
-
-**Overview**: candidate incidents, evidence timeline and detection output for a replayed scenario.
-
-![QaceFlow overview](docs/screenshots/overview.png)
-
-**Investigation workspace**: why alerts were grouped, rule thresholds and explanations, evidence timeline with raw event inspection, and analyst findings.
-
-![QaceFlow investigation workspace](docs/screenshots/investigation.png)
-
-**Event import**: validated JSON import with imported data clearly labelled as unverified.
-
-![QaceFlow event import](docs/screenshots/import.png)
-
-A sample exported report is in [`docs/sample-report.md`](docs/sample-report.md). It was generated from `docs/sample-events.json` with an illustrative analyst note.
+The current version offers three deterministic synthetic authentication scenarios, evaluates detection rules, correlates related alerts, and presents results as cases, events, alerts and rules in a web interface.
 
 ## Features
 
 - **Scenario library:** Replay suspicious-login, repeated-failures and benign-login synthetic activity.
 - **Rule-based detection:** Identify repeated authentication failures and failures followed by success.
 - **Alert correlation:** Group related alerts sharing the same host and account into a candidate incident.
-- **Event explorer:** Search event IDs, timestamps, users, hosts, source IPs, event types and reasons.\n- **Evidence references:** Connect alerts and candidate incidents to the event IDs that support them.
+- **Event explorer:** Search event IDs, timestamps, users, hosts, source IPs, event types and reasons.
+- **Evidence references:** Connect alerts and candidate incidents to the event IDs that support them.
 - **Investigation workspace:** Inspect the incident rationale, related alerts, chronological evidence and raw event payloads.
 - **Persistent analyst notes:** Save investigation notes to SQLite and reload them later.
 - **Incident lifecycle:** Change incident status between open, investigating and closed.
 - **Report export:** Download a Markdown report containing incident metadata, analyst notes, related alerts and evidence references.
 - **Local-first development:** Run the frontend and API on your own machine using synthetic data.
+
+## Interface
+
+The interface is organised around the investigation workflow rather than a dashboard:
+
+| Page | Purpose |
+|---|---|
+| **Cases** | Candidate incidents with severity, status, affected account and host, and the latest alerts |
+| **Case** | One investigation: why alerts were grouped, each alert's rule threshold and rationale, evidence timeline with raw events, status, analyst findings (Ctrl+S saves) and report export |
+| **Events** | Searchable, filterable event table; open an event for its raw payload and see which alerts reference it |
+| **Alerts** | Every alert with its rule, severity, evidence count and owning case; expand for the explanation |
+| **Rules** | The detection rules, their exact thresholds, and what innocent activity could trigger them |
+| **Data** | Replay a synthetic scenario or import your own JSON events |
+
+The header always shows whether the loaded events are simulated or imported (unverified). Routes use the URL hash (`#/cases/INC-0001`), so pages can be bookmarked and the back button works.
 
 ## Architecture
 
@@ -62,7 +62,7 @@ Synthetic authentication scenario
       Candidate incident
               |
               v
-       React dashboard
+       React interface
               |
               v
        Analyst review
@@ -137,7 +137,7 @@ Open the local URL printed by Vite, usually `http://localhost:5173`.
 ### 4. Run the demo
 
 1. Ensure both the backend and frontend are running.
-2. Open the QaceFlow dashboard.
+2. Open QaceFlow in your browser.
 3. Select **Run demo scenario**.
 4. Review the generated events, detection alerts, and candidate incident.
 
