@@ -1,6 +1,7 @@
 
 import json
 import sqlite3
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -17,10 +18,17 @@ ROOT = Path(__file__).resolve().parents[1]
 DB_PATH = ROOT / "qaceflow.db"
 MAX_NOTES_LENGTH = 20_000
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    initialize()
+    yield
+
+
 app = FastAPI(
     title="QaceFlow API",
     description="Local-first security investigation workbench.",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -83,11 +91,6 @@ def initialize() -> None:
                 updated_at TEXT NOT NULL
             );
         """)
-
-
-@app.on_event("startup")
-def startup() -> None:
-    initialize()
 
 
 def decode_alert(row: sqlite3.Row) -> dict[str, Any]:
