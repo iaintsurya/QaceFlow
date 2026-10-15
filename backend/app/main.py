@@ -28,7 +28,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title="QaceFlow API",
     description="Local-first security investigation workbench.",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -128,7 +128,7 @@ def health() -> dict[str, str]:
     return {
         "status": "ok",
         "product": "QaceFlow",
-        "version": "0.1.0",
+        "version": "0.2.0",
     }
 
 
