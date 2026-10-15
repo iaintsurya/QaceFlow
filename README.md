@@ -135,15 +135,23 @@ Replaying the scenario resets the local demo dataset and regenerates the synthet
 | GET | `/api/events` | List generated events |
 | GET | `/api/alerts` | List detection alerts |
 | GET | `/api/incidents` | List candidate incidents |
-| POST | `/api/scenarios/suspicious-login/replay` | Replay the simulated scenario |
+| GET | `/api/rules` | List detection rules with thresholds and explanations |
+| GET | `/api/scenarios` | List the synthetic demo scenarios |
+| POST | `/api/scenarios/{scenario_id}/replay` | Replay a scenario (resets events, alerts, incidents and notes) |
+| GET / PUT | `/api/incidents/{id}/notes` | Read or save analyst notes (max 20,000 characters) |
+| PUT | `/api/incidents/{id}/status` | Set status to `open`, `investigating` or `closed` |
+| GET | `/api/incidents/{id}/report` | Authoritative JSON snapshot of the saved investigation |
+| GET | `/api/incidents/{id}/report.md` | Download the investigation report as Markdown |
+
+Alert IDs are unique and stable, in the form `ALT-<rule>-<nn>` (for example `ALT-AUTH-001-01`).
 
 ## Project roadmap
 
-- [ ] Add automated tests for detection and correlation logic.
-- [ ] Build a dedicated incident investigation page.
-- [ ] Add persistent analyst notes and investigation findings.
+- [x] Add automated tests for detection and correlation logic.
+- [x] Build a dedicated incident investigation page.
+- [x] Add persistent analyst notes and investigation findings.
 - [ ] Improve evidence timelines and event inspection.
-- [ ] Add investigation report export.
+- [x] Add investigation report export (Markdown).
 - [ ] Support validated imports of authorized, sanitized telemetry.
 - [ ] Add versioned detection-rule definitions.
 - [ ] Improve API security and deployment readiness.
@@ -155,7 +163,9 @@ QaceFlow is an educational development project, not a production SIEM or inciden
 - The included scenario uses synthetic telemetry.
 - Detection and correlation logic is intentionally basic.
 - The development API does not include authentication.
-- The replay endpoint resets the local demo dataset.
+- The replay endpoint resets the local demo dataset, including saved notes and incident status.
+- `AUTH-002` fires after a single failure followed by a success, so it can flag a simple typo; the threshold lives in `RULES` in `engine.py`.
+- Correlation groups alerts only by shared host and account.
 - The application should remain on localhost and must not be exposed publicly in its current state.
 
 Do not import sensitive logs or real incident evidence into this development version.
