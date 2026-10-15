@@ -56,3 +56,45 @@ def test_missing_incident_report_returns_404(local_database):
         main.export_incident_report("INC-NOT-REAL")
 
     assert error.value.status_code == 404
+
+
+
+def test_scenario_catalog_lists_three_scenarios(local_database):
+    scenarios = main.available_scenarios()
+    assert {item["id"] for item in scenarios} == {
+        "suspicious-login", "repeated-failures", "benign-login"
+    }
+
+
+def test_repeated_failures_scenario_creates_one_alert_no_incident(local_database):
+    result = main.replay_named_scenario("repeated-failures")
+    assert result["event_count"] == 5
+    assert result["alert_count"] == 1
+    assert result["incident_count"] == 0
+    assert result["reset_notes"] is True
+
+
+def test_benign_scenario_creates_no_alerts_or_incidents(local_database):
+    result = main.replay_named_scenario("benign-login")
+    assert result["event_count"] == 3
+    assert result["alert_count"] == 0
+    assert result["incident_count"] == 0
+    assert main.list_events()[0]["details"]["scenario"] == "benign-login"
+
+
+def test_unknown_scenario_returns_404(local_database):
+    with pytest.raises(HTTPException) as error:
+        main.replay_named_scenario("not-a-scenario")
+    assert error.value.status_code == 404
+
+
+
+def test_replaying_scenario_explicitly_resets_saved_notes(local_database):
+    incident_id = main.list_incidents()[0]["id"]
+    main.save_incident_notes(incident_id, {"notes": "Keep for this case only."})
+
+    result = main.replay_named_scenario("benign-login")
+
+    assert result["reset_notes"] is True
+    assert main.list_incidents() == []
+    assert main.list_events()[0]["details"]["scenario"] == "benign-login"
