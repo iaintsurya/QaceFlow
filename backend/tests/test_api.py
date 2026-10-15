@@ -150,3 +150,45 @@ def test_notes_survive_a_simulated_restart(local_database):
     main.initialize()  # what the server does on startup; must not wipe data
 
     assert main.get_incident_notes(incident_id)["notes"] == "Persisted."
+
+
+def _login_burst():
+    events = [
+        {"event_id": f"IMP-{i}", "timestamp": f"2026-10-14T09:00:{i * 10:02d}Z",
+         "event_type": "authentication.failure", "host": "srv-1", "user": "bob",
+         "src_ip": "198.51.100.9"}
+        for i in range(5)
+    ]
+    events.append({"event_id": "IMP-5", "timestamp": "2026-10-14T09:01:10Z",
+                   "event_type": "authentication.success", "host": "srv-1",
+                   "user": "bob", "src_ip": "198.51.100.9"})
+    return events
+
+
+def test_import_runs_detection_and_correlation(local_database):
+    result = main.import_events({"events": _login_burst()})
+
+    assert result["event_count"] == 6
+    assert result["alert_count"] == 2
+    assert result["incident_count"] == 1
+    assert main.list_events()[0]["source"] == "imported"
+
+
+def test_invalid_import_is_rejected_and_stores_nothing(local_database):
+    before = len(main.list_events())
+
+    with pytest.raises(HTTPException) as error:
+        main.import_events({"events": [{"event_id": "x"}]})
+
+    assert error.value.status_code == 422
+    assert error.value.detail["error_count"] > 0
+    assert len(main.list_events()) == before
+
+
+def test_imported_report_is_labelled_as_imported(local_database):
+    main.import_events({"events": _login_burst()})
+    incident_id = main.list_incidents()[0]["id"]
+
+    body = main.export_incident_report_markdown(incident_id).body.decode()
+
+    assert "Imported data" in body
