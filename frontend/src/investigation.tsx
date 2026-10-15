@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
+import './casefile.css'
 
 const API = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
@@ -49,6 +50,7 @@ export default function Investigation({
   onBack,
 }: Props) {
   const [notes, setNotes] = useState('')
+  const [savedNotes, setSavedNotes] = useState('')
   const [status, setStatus] = useState(incident.status)
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
@@ -82,6 +84,7 @@ export default function Investigation({
 
         if (!cancelled) {
           setNotes(data.notes ?? '')
+          setSavedNotes(data.notes ?? '')
         }
       } catch {
         if (!cancelled) {
@@ -151,6 +154,7 @@ export default function Investigation({
         throw new Error(data.detail ?? 'Could not save notes.')
       }
 
+      setSavedNotes(notes)
       setMessage('Analyst notes saved to the database.')
     } catch (err) {
       setError(
@@ -240,289 +244,211 @@ export default function Investigation({
     }
   }
 
-  const panelStyle = {
-    background: '#FFFFFF',
-    border: '1px solid #E3E6DF',
-    borderRadius: 12,
-    padding: 20,
-    minWidth: 0,
-  } as const
-
-  const mutedStyle = { color: '#6B7068' } as const
+  const dirty = notes !== savedNotes
+  const eventClass = (type: string) =>
+    type.endsWith('success') ? 'event-success' : 'event-failure'
 
   return (
-    <main
-      className="investigation-workspace"
-      style={{
-        minHeight: '100vh',
-        background: '#FFFFFF',
-        color: '#242722',
-        padding: '28px',
-        boxSizing: 'border-box',
-      }}
-    >
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 16,
-          flexWrap: 'wrap',
-          marginBottom: 28,
-        }}
-      >
+    <main className="cf-page">
+      <header className="cf-header">
         <div>
-          <p style={{ ...mutedStyle, fontSize: 12, letterSpacing: 2 }}>
-            QACEFLOW / INCIDENT RESPONSE
-          </p>
-          <h1 style={{ margin: '8px 0' }}>{incident.title}</h1>
-          <p style={mutedStyle}>
-            {incident.id} · {incident.entities.host ?? 'Unknown host'} ·{' '}
-            {incident.entities.user ?? 'Unknown user'}
+          <p className="cf-kicker">Case {incident.id} / Incident response</p>
+          <h1 className="cf-title">{incident.title}</h1>
+          <p className="cf-meta">
+            HOST {incident.entities.host ?? 'unknown'} · ACCOUNT{' '}
+            {incident.entities.user ?? 'unknown'}
           </p>
         </div>
-
-        <button className="primary-btn" onClick={onBack}>
-          ← Back to overview
-        </button>
+        <div className="cf-actions">
+          <button className="secondary-btn" onClick={onBack}>
+            ← Back to overview
+          </button>
+          <button
+            className="primary-btn"
+            onClick={() => void exportReport()}
+            disabled={loading || exporting || savingNotes}
+          >
+            {exporting ? 'Exporting…' : 'Export report (.md)'}
+          </button>
+        </div>
       </header>
 
-      <section
-        style={{
-          ...panelStyle,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 20,
-          flexWrap: 'wrap',
-          marginBottom: 20,
-        }}
-      >
-        <div>
-          <p style={{ ...mutedStyle, margin: '0 0 8px' }}>INCIDENT STATUS</p>
-          <strong>{incident.id}</strong>
-          <p style={mutedStyle}>
-            {incident.severity.toUpperCase()} severity ·{' '}
-            {incidentAlerts.length} alerts · {evidence.length} matching events
-          </p>
+      <section className="cf-bar" aria-label="Incident status">
+        <div className="cf-stat">
+          <span>Severity</span>
+          <strong>
+            <span className={`severity ${incident.severity}`}>{incident.severity}</span>
+          </strong>
         </div>
-
-        <label>
-          Status{' '}
+        <div className="cf-stat">
+          <span>Status</span>
           <select
+            className="cf-select"
             value={status}
             disabled={savingStatus}
             onChange={(event) => void changeStatus(event.target.value)}
-            style={{
-              padding: 10,
-              marginLeft: 8,
-              borderRadius: 8,
-              background: '#F7F8F6',
-              color: '#242722',
-              border: '1px solid #E3E6DF',
-            }}
+            aria-label="Incident status"
           >
             <option value="open">Open</option>
             <option value="investigating">Investigating</option>
             <option value="closed">Closed</option>
           </select>
-          {savingStatus && <span> Saving…</span>}
-        </label>
+        </div>
+        <div className="cf-stat">
+          <span>Alerts</span>
+          <strong>{incidentAlerts.length}</strong>
+        </div>
+        <div className="cf-stat">
+          <span>Evidence events</span>
+          <strong>{incident.event_ids.length}</strong>
+        </div>
+        {savingStatus && <span className="cf-muted">Saving status…</span>}
       </section>
 
       {(message || error || loading) && (
-        <div
-          role="status"
-          style={{
-            ...panelStyle,
-            marginBottom: 20,
-            color: error ? '#B42318' : '#527A37',
-          }}
-        >
+        <div role="status" className={`cf-notice ${error ? 'error' : 'ok'}`}>
           {loading ? 'Loading saved analyst notes…' : error || message}
         </div>
       )}
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 360px), 1fr))',
-          gap: 20,
-          alignItems: 'start',
-        }}
-      >
-        <section style={panelStyle}>
-          <h2>Incident context</h2>
-          <p>{incident.correlation_reason ?? 'No correlation explanation available.'}</p>
+      <div className="cf-grid">
+        <section className="cf-section">
+          <h2>Why these alerts were grouped</h2>
+          <p className="cf-reason">
+            {incident.correlation_reason ?? 'No correlation explanation available.'}
+          </p>
 
-          <h3>Related alerts</h3>
+          <h2>Related alerts</h2>
           {incidentAlerts.length === 0 ? (
-            <p style={mutedStyle}>No related alerts were found.</p>
+            <p className="cf-muted">No related alerts were found.</p>
           ) : (
             incidentAlerts.map((alert) => (
-              <article
-                key={alert.id}
-                style={{
-                  borderTop: '1px solid #E3E6DF',
-                  padding: '14px 0',
-                }}
-              >
-                <strong>{alert.title}</strong>
-                <p style={mutedStyle}>
-                  {alert.rule_id} · {alert.severity.toUpperCase()}
+              <article key={alert.id} className="cf-alert">
+                <div className="cf-alert-head">
+                  <strong>{alert.title}</strong>
+                  <span className={`severity ${alert.severity}`}>{alert.severity}</span>
+                </div>
+                <p className="cf-muted cf-mono">
+                  {alert.id} · RULE {alert.rule_id}
                 </p>
                 <p>{alert.summary}</p>
                 {alert.threshold && (
-                  <p style={mutedStyle}>Rule threshold: {alert.threshold}</p>
+                  <p className="cf-muted">Rule threshold: {alert.threshold}</p>
                 )}
                 {alert.explanation && (
-                  <p style={mutedStyle}>Why it matters: {alert.explanation}</p>
+                  <p className="cf-muted">Why it matters: {alert.explanation}</p>
                 )}
-                <p style={mutedStyle}>
-                  Evidence references: {alert.matched_event_ids.length}
-                </p>
+                <div className="cf-refs" aria-label="Evidence references">
+                  {alert.matched_event_ids.map((id) => (
+                    <span key={id} className="cf-ref">{id}</span>
+                  ))}
+                </div>
               </article>
             ))
           )}
         </section>
 
-        <section style={panelStyle}>
-          <h2>Evidence timeline</h2>
+        <section className="cf-section">
+          <h2>Evidence timeline (UTC)</h2>
           <input
+            className="cf-search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search event ID, user, IP, or event type…"
             aria-label="Search evidence"
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 12,
-              margin: '8px 0 16px',
-              borderRadius: 8,
-              background: '#FFFFFF',
-              color: '#242722',
-              border: '1px solid #E3E6DF',
-            }}
           />
 
           {evidence.length === 0 ? (
-            <p style={mutedStyle}>No matching evidence found.</p>
+            <p className="cf-muted">No matching evidence found.</p>
           ) : (
-            evidence.map((event) => (
-              <article
-                key={event.event_id}
-                style={{
-                  borderLeft: '2px solid #6d9fff',
-                  padding: '4px 0 16px 14px',
-                  marginLeft: 4,
-                  marginBottom: 8,
-                }}
-              >
-                <button
-                  onClick={() =>
-                    setSelectedEvent(
-                      selectedEvent === event.event_id
-                        ? null
-                        : event.event_id
-                    )
-                  }
-                  style={{
-                    padding: 0,
-                    border: 0,
-                    background: 'transparent',
-                    color: '#527A37',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  {event.event_id} · {event.event_type}
-                </button>
-                <p style={mutedStyle}>
-                  {new Date(event.timestamp).toLocaleString()} ·{' '}
-                  {event.user ?? 'Unknown user'} ·{' '}
-                  {event.host ?? 'Unknown host'}
-                </p>
-
-                {selectedEvent === event.event_id && (
-                  <pre
-                    style={{
-                      whiteSpace: 'pre-wrap',
-                      overflowWrap: 'anywhere',
-                      background: '#FFFFFF',
-                      padding: 12,
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                  >
-                    {JSON.stringify(event, null, 2)}
-                  </pre>
-                )}
-              </article>
-            ))
+            <div className="cf-table-wrap">
+              <table className="cf-table">
+                <thead>
+                  <tr>
+                    <th>TIME</th>
+                    <th>EVENT</th>
+                    <th>TYPE</th>
+                    <th>ACCOUNT / HOST</th>
+                    <th>SOURCE IP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evidence.map((event) => (
+                    <tr key={event.event_id}>
+                      <td className="cf-mono">
+                        {new Date(event.timestamp).toISOString().slice(11, 19)}
+                      </td>
+                      <td>
+                        <button
+                          className="cf-row-btn"
+                          aria-expanded={selectedEvent === event.event_id}
+                          onClick={() =>
+                            setSelectedEvent(
+                              selectedEvent === event.event_id ? null : event.event_id
+                            )
+                          }
+                        >
+                          {event.event_id}
+                        </button>
+                        {selectedEvent === event.event_id && (
+                          <pre className="cf-raw">{JSON.stringify(event, null, 2)}</pre>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`event-type ${eventClass(event.event_type)}`}>
+                          {event.event_type}
+                        </span>
+                      </td>
+                      <td>
+                        {event.user ?? 'unknown'}
+                        <div className="cf-muted">{event.host ?? 'unknown'}</div>
+                      </td>
+                      <td className="cf-mono">{event.src_ip ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
 
-        <section style={{ ...panelStyle, gridColumn: '1 / -1' }}>
-          <h2>Analyst notes</h2>
-          <p style={mutedStyle}>
-            Record observations, investigation steps, and conclusions for this
-            incident. Notes are saved in the local SQLite database.
+        <section className="cf-section wide">
+          <h2>Analyst findings</h2>
+          <p className="cf-muted">
+            Record observations, investigation steps and conclusions. Notes are saved
+            in the local SQLite database and included in the exported report.
           </p>
-
           <textarea
+            className="cf-notes"
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             placeholder="Document what you observed, what you investigated, and what you concluded…"
             rows={8}
+            maxLength={20000}
             disabled={loading}
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              resize: 'vertical',
-              padding: 14,
-              borderRadius: 8,
-              background: '#FFFFFF',
-              color: '#242722',
-              border: '1px solid #E3E6DF',
-              font: 'inherit',
-              lineHeight: 1.6,
-            }}
+            aria-label="Analyst notes"
           />
-
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 12,
-              flexWrap: 'wrap',
-              marginTop: 12,
-            }}
-          >
-            <span style={mutedStyle}>{notes.length} characters</span>
-            <div className="iv-actions">
-              <button
-                className="secondary-btn"
-                onClick={() => void exportReport()}
-                disabled={loading || exporting || savingNotes}
-              >
-                {exporting ? 'Exporting…' : 'Export report (.md)'}
-              </button>
-              <button
-                className="primary-btn"
-                onClick={() => void saveNotes()}
-                disabled={loading || savingNotes}
-              >
-                {savingNotes ? 'Saving…' : 'Save analyst notes'}
-              </button>
-            </div>
+          <div className="cf-foot">
+            <span className="cf-muted">
+              {notes.length.toLocaleString()} / 20,000 characters ·{' '}
+              <span className={dirty ? 'cf-dirty' : 'cf-saved'}>
+                {dirty ? 'Unsaved changes' : 'All changes saved'}
+              </span>
+            </span>
+            <button
+              className="primary-btn"
+              onClick={() => void saveNotes()}
+              disabled={loading || savingNotes || !dirty}
+            >
+              {savingNotes ? 'Saving…' : 'Save analyst notes'}
+            </button>
           </div>
         </section>
       </div>
 
-      <footer style={{ ...mutedStyle, marginTop: 28, fontSize: 12 }}>
-        QaceFlow · Local-first investigation · Synthetic demo telemetry
-      </footer>
+      <p className="cf-fine">
+        QaceFlow · Local-first investigation · A candidate incident is a hypothesis, not proof of compromise.
+      </p>
     </main>
   )
 }
