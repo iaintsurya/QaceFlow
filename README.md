@@ -4,7 +4,7 @@
 
 QaceFlow is a local-first cybersecurity project designed to explore how security events can be transformed into actionable alerts and candidate incidents. It combines simulated authentication telemetry, rule-based detection, basic alert correlation, and an interactive investigation dashboard.
 
-> **Project status:** Early development · v0.1.0  
+> **Project status:** Early development · v0.2.0  
 > **Environment:** Local development with synthetic telemetry
 
 ## Overview
@@ -151,7 +151,7 @@ Alert IDs are unique and stable, in the form `ALT-<rule>-<nn>` (for example `ALT
 - [x] Add automated tests for detection and correlation logic.
 - [x] Build a dedicated incident investigation page.
 - [x] Add persistent analyst notes and investigation findings.
-- [ ] Improve evidence timelines and event inspection.
+- [x] Improve evidence timelines and event inspection.
 - [x] Add investigation report export (Markdown).
 - [x] Support validated imports of authorized, sanitized telemetry (JSON).
 - [ ] Add versioned detection-rule definitions.
