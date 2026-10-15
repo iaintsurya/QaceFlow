@@ -197,7 +197,7 @@ export default function App() {
         <div className="sidebar-bottom">
           <div className="env-card">
             <div className="env-top"><span className="status-dot" /> LOCAL LAB</div>
-            <p>Simulated telemetry only</p>
+            <p>{simulatedOnly ? 'Simulated telemetry only' : 'Imported telemetry (unverified)'}</p>
             <small>No external data sources connected</small>
           </div>
           <div className="profile-row"><div className="avatar">Q</div><div><strong>Analyst workspace</strong><small>Development build · v0.2.0</small></div></div>
@@ -303,7 +303,7 @@ export default function App() {
           </section>
 
           <section className="panel casebook-panel" id="casebook">
-            <div className="panel-header"><div><div className="panel-kicker">CASEBOOK PREVIEW</div><h2>{activeIncident ? activeIncident.title : 'Investigation casebook'}</h2></div><span className="draft-label"><BookOpen size={13}/> FOUNDATION</span></div>
+            <div className="panel-header"><div><div className="panel-kicker">CASEBOOK PREVIEW</div><h2>{activeIncident ? activeIncident.title : 'Investigation casebook'}</h2></div><span className="draft-label"><BookOpen size={13}/> {activeIncident ? activeIncident.status.toUpperCase() : 'EMPTY'}</span></div>
             {!activeIncident ? <Empty icon={<BookOpen size={20}/>} title="No casebook to inspect" text="A casebook will be available when a candidate incident exists."/> :
               <div className="casebook-body"><div className="casebook-summary"><div className="casebook-id">{activeIncident.id}</div><p>{activeIncident.correlation_reason}</p><div className="casebook-stats"><span><strong>{activeIncident.alert_ids.length}</strong> alerts</span><span><strong>{activeIncident.event_ids.length}</strong> evidence references</span><span><strong>{activeIncident.status}</strong> status</span></div></div><div className="casebook-next"><div className="next-icon"><CheckCircle2 size={18}/></div><div><strong>Next step</strong><p>Open the investigation workspace to review evidence, save analyst notes, change status and export the report.</p></div><ArrowUpRight size={17}/></div></div>}
           </section>
@@ -317,6 +317,7 @@ export default function App() {
 )}
           <section className="panel import-panel" id="import">
             <div className="panel-header"><div><div className="panel-kicker">TELEMETRY / IMPORT</div><h2>Import events</h2></div><span className="count-pill">JSON</span></div>
+            <div className="import-body">
             <p className="import-help">Paste a JSON array of events, or choose a file. Required fields: <code>event_id</code>, <code>timestamp</code> (ISO 8601), <code>event_type</code>, <code>host</code>, <code>user</code>. Optional: <code>src_ip</code>, <code>details</code>. Detections currently understand <code>authentication.failure</code> and <code>authentication.success</code>. Use only authorized, sanitized data. The import is rejected as a whole if any record is invalid.</p>
             <textarea className="import-box" value={importText} onChange={event => setImportText(event.target.value)} rows={8} spellCheck={false} aria-label="Events JSON" placeholder='[{"event_id":"E1","timestamp":"2026-10-14T09:00:00Z","event_type":"authentication.failure","host":"srv-1","user":"bob","src_ip":"198.51.100.9"}]' />
             <div className="import-actions">
@@ -324,6 +325,7 @@ export default function App() {
               <button className="primary-btn" onClick={() => void importEvents()} disabled={importing || !importText.trim()}>{importing ? 'Importing…' : 'Import events'}</button>
             </div>
             {importErrors.length > 0 && <ul className="import-errors" role="alert">{importErrors.map((error, index) => <li key={index}>{error}</li>)}</ul>}
+            </div>
           </section>
           <footer><span>QaceFlow <b>·</b> v0.2.0</span><span><span className="status-dot"/> Local-first · {simulatedOnly ? 'Synthetic data' : 'Imported data'}</span><span>Built for explainable investigations</span></footer>
         </div>
