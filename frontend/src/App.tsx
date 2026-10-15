@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Activity, AlertTriangle, ArrowUpRight, BookOpen,
   CheckCircle2, ChevronRight, CircleDot, Clock3, Fingerprint, GitMerge,
-  Play, RadioTower, Search, Shield, ShieldAlert, Workflow, Zap
+  Play, RadioTower, Search, Shield, ShieldAlert, Upload, Workflow, Zap
 } from 'lucide-react'
 import Investigation from './investigation'
 
@@ -43,6 +43,9 @@ export default function App() {
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [selectedScenario, setSelectedScenario] = useState('suspicious-login')
   const [eventQuery, setEventQuery] = useState('')
+  const [importText, setImportText] = useState('')
+  const [importErrors, setImportErrors] = useState<string[]>([])
+  const [importing, setImporting] = useState(false)
 
   async function refresh(): Promise<Incident[]> {
     try {
@@ -94,6 +97,57 @@ export default function App() {
     } finally { setBusy(false) }
   }
 
+  async function importEvents() {
+    setImportErrors([])
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(importText)
+    } catch {
+      setImportErrors(['The text is not valid JSON.'])
+      return
+    }
+    const events = Array.isArray(parsed) ? parsed : (parsed as { events?: unknown })?.events
+
+    if (incidents.length > 0 && !window.confirm('Importing replaces the active dataset and clears saved notes and incident status. Continue?')) return
+    setImporting(true)
+    try {
+      const response = await fetch(`${API}/api/events/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ events }),
+      })
+      const result = await response.json()
+      if (!response.ok) {
+        const detail = result.detail
+        if (detail && typeof detail === 'object' && Array.isArray(detail.errors)) {
+          setImportErrors([
+            detail.message,
+            ...detail.errors.map((e: { index: number | null; field: string; message: string }) =>
+              e.index === null ? e.message : `Event ${e.index + 1} · ${e.field}: ${e.message}`),
+          ])
+        } else {
+          setImportErrors([typeof detail === 'string' ? detail : 'Import failed.'])
+        }
+        return
+      }
+      const freshIncidents = await refresh()
+      setSelected(freshIncidents[0]?.id ?? null)
+      setMessage(`Import complete · ${result.event_count} events · ${result.alert_count} alerts · ${result.incident_count} candidate incidents. Imported events are unverified.`)
+      setImportText('')
+    } catch {
+      setImportErrors(['Could not reach the API. Start the backend at http://127.0.0.1:8000 and try again.'])
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  async function loadImportFile(file: File | undefined) {
+    if (!file) return
+    setImportErrors([])
+    setImportText(await file.text())
+  }
+
+  const simulatedOnly = events.every(event => event.source === 'simulated_auth_log')
   const activeIncident = incidents.find(i => i.id === selected) ?? incidents[0]
   const filteredEvents = events.filter(event => {
   const query = eventQuery.trim().toLowerCase()
@@ -136,6 +190,7 @@ export default function App() {
           <a className="nav-item" href="#alerts"><Zap size={17} /> Detections</a>
           <a className="nav-item" href="#incidents"><GitMerge size={17} /> Incidents <span className="nav-count">{incidents.length.toString().padStart(2, '0')}</span></a>
           <a className="nav-item" href="#casebook"><BookOpen size={17} /> Casebook</a>
+          <a className="nav-item" href="#import"><Upload size={17} /> Import</a>
         </nav>
         <div className="sidebar-bottom">
           <div className="env-card">
@@ -170,7 +225,7 @@ export default function App() {
             </div>
           </section>
 
-          <div className="notice"><div className="notice-icon"><Shield size={17} /></div><div><strong>Local simulation environment</strong><span>All current events are synthetic. No live endpoints or external telemetry are being monitored.</span></div><span className="notice-tag">SAFE LAB</span></div>
+          <div className="notice"><div className="notice-icon"><Shield size={17} /></div><div><strong>{simulatedOnly ? 'Local simulation environment' : 'Imported data loaded'}</strong><span>{simulatedOnly ? 'All current events are synthetic. No live endpoints or external telemetry are being monitored.' : 'These events were imported by an analyst and are unverified. No live endpoints are being monitored.'}</span></div><span className="notice-tag">SAFE LAB</span></div>
 
           <section className="metrics-grid">
             <Metric icon={<RadioTower size={17}/>} label="Events ingested" value={events.length} detail="Current scenario" tone="blue"/>
@@ -251,7 +306,17 @@ export default function App() {
     Open investigation →
   </button>
 )}
-          <footer><span>QaceFlow <b>·</b> v0.1.0</span><span><span className="status-dot"/> Local-first · Synthetic data</span><span>Built for explainable investigations</span></footer>
+          <section className="panel import-panel" id="import">
+            <div className="panel-header"><div><div className="panel-kicker">TELEMETRY / IMPORT</div><h2>Import events</h2></div><span className="count-pill">JSON</span></div>
+            <p className="import-help">Paste a JSON array of events, or choose a file. Required fields: <code>event_id</code>, <code>timestamp</code> (ISO 8601), <code>event_type</code>, <code>host</code>, <code>user</code>. Optional: <code>src_ip</code>, <code>details</code>. Detections currently understand <code>authentication.failure</code> and <code>authentication.success</code>. Use only authorized, sanitized data. The import is rejected as a whole if any record is invalid.</p>
+            <textarea className="import-box" value={importText} onChange={event => setImportText(event.target.value)} rows={8} spellCheck={false} aria-label="Events JSON" placeholder='[{"event_id":"E1","timestamp":"2026-10-14T09:00:00Z","event_type":"authentication.failure","host":"srv-1","user":"bob","src_ip":"198.51.100.9"}]' />
+            <div className="import-actions">
+              <label className="file-btn">Choose JSON file<input type="file" accept="application/json,.json" onChange={event => void loadImportFile(event.target.files?.[0])} hidden /></label>
+              <button className="primary-btn" onClick={() => void importEvents()} disabled={importing || !importText.trim()}>{importing ? 'Importing…' : 'Import events'}</button>
+            </div>
+            {importErrors.length > 0 && <ul className="import-errors" role="alert">{importErrors.map((error, index) => <li key={index}>{error}</li>)}</ul>}
+          </section>
+          <footer><span>QaceFlow <b>·</b> v0.1.0</span><span><span className="status-dot"/> Local-first · {simulatedOnly ? 'Synthetic data' : 'Imported data'}</span><span>Built for explainable investigations</span></footer>
         </div>
       </main>
     </div>
