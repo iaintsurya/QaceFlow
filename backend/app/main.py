@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from .engine import RULES, correlate, detect
+from .ingest import validate_events
 from .reporting import build_markdown_report
 from .scenarios import SCENARIOS, get_scenario, list_scenarios
 
@@ -173,17 +174,15 @@ def available_scenarios() -> list[dict[str, Any]]:
     return list_scenarios()
 
 
-def _replay_scenario(scenario_id: str) -> dict[str, Any]:
-    try:
-        events = get_scenario(scenario_id)
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
+def _store_dataset(events: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Detect, correlate and persist a dataset, replacing the active one.
 
+    Replacing the dataset also clears notes and status. Callers state this in
+    their response so the reset is never implicit.
+    """
     alerts = detect(events)
     incidents = correlate(alerts)
 
-    # Replaying a scenario replaces the active demo dataset, including notes.
-    # This is intentional and is stated in the response so it is never implicit.
     with connect() as db:
         db.execute("DELETE FROM events")
         db.execute("DELETE FROM alerts")
@@ -234,6 +233,17 @@ def _replay_scenario(scenario_id: str) -> dict[str, Any]:
                     incident["correlation_reason"],
                 ),
             )
+
+    return alerts, incidents
+
+
+def _replay_scenario(scenario_id: str) -> dict[str, Any]:
+    try:
+        events = get_scenario(scenario_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+    alerts, incidents = _store_dataset(events)
 
     return {
         "scenario": scenario_id,
