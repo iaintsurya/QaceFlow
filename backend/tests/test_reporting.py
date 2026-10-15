@@ -75,3 +75,20 @@ def test_report_escapes_markdown_table_characters():
 
     assert "EVT\\|1" in report
     assert "a b" in report
+
+
+def test_report_labels_imported_events_as_unverified():
+    events = [{"event_id": "E1", "timestamp": "t", "event_type": "x", "user": "u",
+               "host": "h", "src_ip": None, "source": "imported"}]
+
+    report = build_markdown_report(snapshot(events=events))
+
+    assert "Imported data" in report
+    assert "Simulated data" not in report
+
+
+def test_report_labels_simulated_events_as_simulated():
+    events = [{"event_id": "E1", "timestamp": "t", "event_type": "x", "user": "u",
+               "host": "h", "src_ip": None, "source": "simulated_auth_log"}]
+
+    assert "Simulated data" in build_markdown_report(snapshot(events=events))

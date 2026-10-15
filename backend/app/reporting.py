@@ -17,6 +17,19 @@ def _quote(text: str) -> str:
     return "\n".join(f"> {line}" if line else ">" for line in text.splitlines())
 
 
+def _origin_notice(events: list[dict[str, Any]]) -> str:
+    if events and any(e.get("source") != "simulated_auth_log" for e in events):
+        return (
+            "> **Imported data.** Events were supplied by an analyst and have not been "
+            "verified by QaceFlow. Correlated activity is a candidate for investigation, "
+            "not proof of compromise."
+        )
+    return (
+        "> **Simulated data.** Events in this report are synthetic lab telemetry. "
+        "Correlated activity is a candidate for investigation, not proof of compromise."
+    )
+
+
 def build_markdown_report(snapshot: dict[str, Any]) -> str:
     incident = snapshot["incident"]
     entities = incident.get("entities", {})
@@ -27,8 +40,7 @@ def build_markdown_report(snapshot: dict[str, Any]) -> str:
     lines = [
         f"# Investigation report: {incident['id']}",
         "",
-        "> **Simulated data.** Events in this report are synthetic lab telemetry. "
-        "Correlated activity is a candidate for investigation, not proof of compromise.",
+        _origin_notice(events),
         "",
         "## Case metadata",
         "",
