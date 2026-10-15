@@ -13,6 +13,22 @@ Security investigations often involve connecting individual events, understandin
 
 The current version offers three deterministic synthetic authentication scenarios, evaluates detection rules, correlates related alerts, and presents results in a searchable web dashboard.
 
+## Screenshots
+
+**Overview**: candidate incidents, evidence timeline and detection output for a replayed scenario.
+
+![QaceFlow overview](docs/screenshots/overview.png)
+
+**Investigation workspace**: why alerts were grouped, rule thresholds and explanations, evidence timeline with raw event inspection, and analyst findings.
+
+![QaceFlow investigation workspace](docs/screenshots/investigation.png)
+
+**Event import**: validated JSON import with imported data clearly labelled as unverified.
+
+![QaceFlow event import](docs/screenshots/import.png)
+
+A sample exported report is in [`docs/sample-report.md`](docs/sample-report.md). It was generated from `docs/sample-events.json` with an illustrative analyst note.
+
 ## Features
 
 - **Scenario library:** Replay suspicious-login, repeated-failures and benign-login synthetic activity.
