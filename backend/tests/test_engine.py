@@ -1,5 +1,5 @@
 
-from app.engine import detect, correlate
+from app.engine import RULES, correlate, detect
 
 
 def make_event(event_id, seconds, event_type, user="demo-user"):
@@ -161,3 +161,128 @@ def test_correlation_requires_two_alerts():
         "id": "ALT-1", "rule_id": "AUTH-001", "severity": "medium",
         "matched_event_ids": ["EVT-1"], "entity": {"host": "host-a", "user": "alice"},
     }]) == []
+
+
+# --- Window boundaries -------------------------------------------------------
+
+def test_auth001_triggers_at_exactly_120_seconds():
+    events = [make_event(f"EVT-{i}", i * 30, "authentication.failure") for i in range(5)]
+
+    assert any(a["rule_id"] == "AUTH-001" for a in detect(events))
+
+
+def test_auth001_does_not_trigger_when_window_exceeds_120_seconds():
+    offsets = [0, 30, 60, 90, 121]
+    events = [make_event(f"EVT-{i}", s, "authentication.failure") for i, s in enumerate(offsets)]
+
+    assert not any(a["rule_id"] == "AUTH-001" for a in detect(events))
+
+
+def test_auth001_ignores_slow_failures_spread_over_minutes():
+    events = [make_event(f"EVT-{i}", i * 60, "authentication.failure") for i in range(6)]
+
+    assert not any(a["rule_id"] == "AUTH-001" for a in detect(events))
+
+
+def test_auth002_triggers_at_exactly_five_minutes():
+    events = [
+        make_event("EVT-1", 0, "authentication.failure"),
+        make_event("EVT-2", 300, "authentication.success"),
+    ]
+
+    assert any(a["rule_id"] == "AUTH-002" for a in detect(events))
+
+
+def test_auth002_does_not_trigger_after_five_minutes():
+    events = [
+        make_event("EVT-1", 0, "authentication.failure"),
+        make_event("EVT-2", 301, "authentication.success"),
+    ]
+
+    assert not any(a["rule_id"] == "AUTH-002" for a in detect(events))
+
+
+def test_failures_after_a_success_do_not_trigger_auth002():
+    events = [
+        make_event("EVT-1", 0, "authentication.success"),
+        make_event("EVT-2", 30, "authentication.failure"),
+        make_event("EVT-3", 60, "authentication.failure"),
+    ]
+
+    assert not any(a["rule_id"] == "AUTH-002" for a in detect(events))
+
+
+# --- Entities ----------------------------------------------------------------
+
+def test_failures_on_different_hosts_are_not_combined():
+    events = []
+    for i in range(3):
+        events.append(make_event(f"EVT-A{i}", i * 10, "authentication.failure"))
+        other = make_event(f"EVT-B{i}", i * 10 + 5, "authentication.failure")
+        other["host"] = "lab-workstation-02"
+        events.append(other)
+
+    assert not any(a["rule_id"] == "AUTH-001" for a in detect(events))
+
+
+# --- Alert identity and determinism ------------------------------------------
+
+def test_two_separate_bursts_create_two_alerts_with_unique_ids():
+    first = [make_event(f"EVT-A{i}", i * 10, "authentication.failure") for i in range(5)]
+    second = [make_event(f"EVT-B{i}", 1000 + i * 10, "authentication.failure") for i in range(5)]
+
+    alerts = [a for a in detect(first + second) if a["rule_id"] == "AUTH-001"]
+
+    assert len(alerts) == 2
+    assert len({a["id"] for a in alerts}) == 2
+    assert alerts[0]["matched_event_ids"] == [f"EVT-A{i}" for i in range(5)]
+
+
+def test_multiple_successes_create_unique_auth002_alert_ids():
+    events = [
+        make_event("EVT-1", 0, "authentication.failure"),
+        make_event("EVT-2", 60, "authentication.success"),
+        make_event("EVT-3", 120, "authentication.success"),
+    ]
+
+    alerts = [a for a in detect(events) if a["rule_id"] == "AUTH-002"]
+
+    assert len(alerts) == 2
+    assert len({a["id"] for a in alerts}) == 2
+
+
+def test_detection_does_not_depend_on_input_order():
+    events = [make_event(f"EVT-{i}", i * 10, "authentication.failure") for i in range(5)]
+    events.append(make_event("EVT-9", 80, "authentication.success"))
+
+    assert detect(events) == detect(list(reversed(events)))
+
+
+def test_every_alert_references_a_documented_rule():
+    events = [make_event(f"EVT-{i}", i * 10, "authentication.failure") for i in range(5)]
+    events.append(make_event("EVT-9", 80, "authentication.success"))
+
+    for alert in detect(events):
+        assert alert["rule_id"] in RULES
+        assert alert["matched_event_ids"]
+        assert alert["id"].startswith(f"ALT-{alert['rule_id']}-")
+
+
+def test_empty_input_produces_no_alerts_or_incidents():
+    assert detect([]) == []
+    assert correlate([]) == []
+
+
+# --- Correlation -------------------------------------------------------------
+
+def test_correlation_reason_names_the_rules_and_entities():
+    alerts = [
+        make_alert("ALT-1", "AUTH-001", "host-1", "alice", "medium", ["EVT-1"]),
+        make_alert("ALT-2", "AUTH-002", "host-1", "alice", "high", ["EVT-2"]),
+    ]
+
+    reason = correlate(alerts)[0]["correlation_reason"]
+
+    assert "AUTH-001" in reason and "AUTH-002" in reason
+    assert "host-1" in reason and "alice" in reason
+    assert "not proof" in reason
