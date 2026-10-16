@@ -13,6 +13,32 @@ Security investigations often involve connecting individual events, understandin
 
 The current version offers three deterministic synthetic authentication scenarios, evaluates detection rules, correlates related alerts, and presents results as cases, events, alerts and rules in a web interface.
 
+## Screenshots
+
+**Case**: one investigation, with the reason alerts were grouped, each rule's threshold and rationale, and a chronological evidence timeline.
+
+![Case](docs/screenshots/case.png)
+
+**Cases**: candidate incidents with severity, status and affected account, plus the latest alerts. The header shows that this dataset is imported and unverified.
+
+![Cases](docs/screenshots/cases.png)
+
+**Events**: searchable, filterable evidence, showing which alerts reference each event.
+
+![Events](docs/screenshots/events.png)
+
+**Data**: replay a synthetic scenario or import your own validated JSON events.
+
+![Data](docs/screenshots/data.png)
+
+A sample exported report is in [`docs/sample-report.md`](docs/sample-report.md), generated from [`docs/sample-events.json`](docs/sample-events.json).
+
+## Documentation
+
+- [Project report](docs/PROJECT_REPORT.md): problem, architecture, detection logic, testing, security and limitations.
+- [Learning guide](docs/LEARNING_GUIDE.md): a plain-language tour, worked example, code map, exercises and interview questions.
+- [Changelog](CHANGELOG.md)
+
 ## Features
 
 - **Scenario library:** Replay suspicious-login, repeated-failures and benign-login synthetic activity.
