@@ -1,5 +1,7 @@
 """Tests for QaceFlow's local incident persistence and reporting API."""
 
+from pathlib import Path
+
 import pytest
 from fastapi import HTTPException
 
@@ -205,3 +207,46 @@ def test_markdown_report_includes_mitre_mapping(local_database):
     body = main.export_incident_report_markdown(incident_id).body.decode()
 
     assert "T1110" in body and "T1078" in body
+
+
+SAMPLE_LOG = Path(__file__).resolve().parents[2] / "docs" / "sample-auth.log"
+
+
+def test_auth_log_import_runs_detection_and_reports_skipped_lines(local_database):
+    result = main.import_events(
+        {"format": "sshd-auth-log", "text": SAMPLE_LOG.read_text(), "year": 2026}
+    )
+
+    assert result["alert_count"] == 2 and result["incident_count"] == 1
+    assert result["skipped_lines"] > 0
+    event = main.list_events()[0]
+    assert event["source"] == "imported" and "raw" in event["details"]
+
+
+def test_auth_log_import_rejects_files_without_login_events(local_database):
+    with pytest.raises(HTTPException) as error:
+        main.import_events({"format": "sshd-auth-log", "text": "nothing useful here\n", "year": 2026})
+
+    assert error.value.status_code == 422
+    assert "No sshd login events" in error.value.detail["message"]
+
+
+def test_auth_log_import_validates_text_year_and_format(local_database):
+    for payload, expected in [
+        ({"format": "sshd-auth-log", "text": 5}, 422),
+        ({"format": "sshd-auth-log", "text": "x", "year": "2026"}, 422),
+        ({"format": "sshd-auth-log", "text": "x", "year": 1999}, 422),
+        ({"format": "windows-evtx", "text": "x"}, 422),
+    ]:
+        with pytest.raises(HTTPException) as error:
+            main.import_events(payload)
+        assert error.value.status_code == expected
+
+
+def test_failed_log_import_keeps_the_existing_dataset(local_database):
+    before = len(main.list_events())
+
+    with pytest.raises(HTTPException):
+        main.import_events({"format": "sshd-auth-log", "text": "junk", "year": 2026})
+
+    assert len(main.list_events()) == before
