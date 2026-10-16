@@ -220,7 +220,7 @@ function CaseView({ incident, alerts, events, onChanged }: Omit<Props, 'incident
           </section>
         </div>
 
-        <section className="block">
+        <section className="block evidence">
           <h2>Evidence timeline</h2>
           <input
             type="search"
