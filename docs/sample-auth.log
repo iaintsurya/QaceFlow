@@ -1,0 +1,14 @@
+Oct 14 03:11:02 web-01 CRON[2190]: pam_unix(cron:session): session opened for user root by (uid=0)
+Oct 14 03:11:40 web-01 sshd[2203]: Accepted publickey for alice from 192.0.2.15 port 50122 ssh2: RSA SHA256:abc123
+Oct 14 03:12:07 web-01 sshd[2211]: Invalid user admin from 203.0.113.50 port 51100
+Oct 14 03:12:09 web-01 sshd[2211]: Failed password for invalid user admin from 203.0.113.50 port 51100 ssh2
+Oct 14 03:12:15 web-01 sshd[2213]: Failed password for root from 203.0.113.50 port 51122 ssh2
+Oct 14 03:12:21 web-01 sshd[2215]: Failed password for root from 203.0.113.50 port 51140 ssh2
+Oct 14 03:12:27 web-01 sshd[2217]: Failed password for root from 203.0.113.50 port 51158 ssh2
+Oct 14 03:12:33 web-01 sshd[2219]: Failed password for root from 203.0.113.50 port 51176 ssh2
+Oct 14 03:12:39 web-01 sshd[2221]: Failed password for root from 203.0.113.50 port 51194 ssh2
+Oct 14 03:12:41 web-01 sshd[2221]: pam_unix(sshd:auth): authentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=203.0.113.50  user=root
+Oct 14 03:12:52 web-01 sshd[2230]: Accepted password for root from 203.0.113.50 port 51210 ssh2
+Oct 14 03:12:52 web-01 sshd[2230]: pam_unix(sshd:session): session opened for user root by (uid=0)
+Oct 14 03:40:11 web-01 sshd[2301]: Accepted publickey for bob from 192.0.2.77 port 50990 ssh2: RSA SHA256:def456
+Oct 14 03:55:00 web-01 systemd[1]: Started Daily apt download activities.
