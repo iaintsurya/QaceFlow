@@ -20,6 +20,8 @@
 - Reports describe imported events as unverified rather than simulated.
 
 ### Changed
+- The interface was redesigned as a case ledger: top-bar navigation, dense tables, serif headings, and separate Cases, Case, Events, Alerts, Rules and Data pages. The frontend is split into typed modules with a single stylesheet.
+- The Rules page lists every detection rule with its exact threshold and rationale.
 - Frontend dependencies are pinned instead of `latest`.
 - Replaying a scenario or importing events asks for confirmation because it clears notes and status.
 
