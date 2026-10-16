@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { ApiError, downloadReport, getNotes, saveNotes, saveStatus } from '../api'
-import { Chip, Empty, Severity } from '../components/ui'
+import { Chip, Empty, Severity, Techniques } from '../components/ui'
 import { datasetOrigin, eventSpan, plural, utc } from '../format'
 import type { Alert, EventRecord, Incident, Notice } from '../types'
 
@@ -212,6 +212,7 @@ function CaseView({ incident, alerts, events, onChanged }: Omit<Props, 'incident
                 <dl className="facts">
                   {alert.threshold && (<><dt>Threshold</dt><dd>{alert.threshold}</dd></>)}
                   {alert.explanation && (<><dt>Why it matters</dt><dd>{alert.explanation}</dd></>)}
+                  {alert.mitre && alert.mitre.length > 0 && (<><dt>MITRE ATT&amp;CK</dt><dd><Techniques items={alert.mitre} /></dd></>)}
                   <dt>Evidence</dt>
                   <dd>{alert.matched_event_ids.map((id) => <Chip key={id}>{id}</Chip>)}</dd>
                 </dl>

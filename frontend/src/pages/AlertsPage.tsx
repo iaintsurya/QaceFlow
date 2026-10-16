@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react'
-import { Chip, Empty, PageHead, Severity } from '../components/ui'
+import { Chip, Empty, PageHead, Severity, Techniques } from '../components/ui'
 import { plural, utc } from '../format'
 import { caseHref } from '../router'
 import type { Alert, Incident } from '../types'
@@ -77,6 +77,7 @@ export default function AlertsPage({ alerts, incidents }: Props) {
                             <dd>{alert.summary}</dd>
                             {alert.threshold && (<><dt>Rule threshold</dt><dd>{alert.threshold}</dd></>)}
                             {alert.explanation && (<><dt>Why it matters</dt><dd>{alert.explanation}</dd></>)}
+                            {alert.mitre && alert.mitre.length > 0 && (<><dt>MITRE ATT&amp;CK</dt><dd><Techniques items={alert.mitre} /></dd></>)}
                             <dt>Evidence</dt>
                             <dd>{alert.matched_event_ids.map((id) => <Chip key={id}>{id}</Chip>)}</dd>
                           </dl>

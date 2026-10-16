@@ -74,6 +74,13 @@ export const importEvents = (events: unknown) =>
     body: JSON.stringify({ events }),
   })
 
+export const importLog = (text: string, year: number) =>
+  json<LoadResult>('/api/events/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ format: 'sshd-auth-log', text, year }),
+  })
+
 export const getNotes = (id: string) =>
   json<{ notes: string; updated_at?: string | null }>(`${incidentPath(id)}/notes`)
 

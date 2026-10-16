@@ -167,3 +167,11 @@ textarea { width: 100%; padding: 12px; line-height: 1.6; resize: vertical; }
   .facts { grid-template-columns: 1fr; gap: 0; }
   .facts dd { margin-bottom: 8px; }
 }
+
+/* MITRE ATT&CK references */
+.technique { display: block; margin-bottom: 2px; font-size: 14px; }
+.grid .technique { white-space: nowrap; }
+
+/* Import format controls */
+.inline-label { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: 14px; }
+input.year { width: 84px; height: 36px; padding: 0 10px; }

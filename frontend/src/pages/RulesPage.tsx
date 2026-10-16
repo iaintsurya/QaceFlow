@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getRules, ApiError } from '../api'
-import { Empty, PageHead, Severity } from '../components/ui'
+import { Empty, PageHead, Severity, Techniques } from '../components/ui'
 import type { Rule } from '../types'
 
 export default function RulesPage() {
@@ -17,7 +17,7 @@ export default function RulesPage() {
     <>
       <PageHead
         title="Detection rules"
-        lede="Every alert comes from one of these deterministic rules. Thresholds are fixed and visible, so a detection can always be explained and challenged."
+        lede="Every alert comes from one of these deterministic rules. Thresholds are fixed and visible, so a detection can always be explained and challenged. ATT&CK references are indicative: they say which adversary behaviour a rule is designed to surface, not that it occurred."
       />
 
       {error ? (
@@ -33,6 +33,7 @@ export default function RulesPage() {
                 <th>Severity</th>
                 <th>Triggers when</th>
                 <th>Why it matters, and what could be innocent</th>
+                <th>MITRE ATT&amp;CK</th>
               </tr>
             </thead>
             <tbody>
@@ -45,6 +46,7 @@ export default function RulesPage() {
                   <td><Severity value={rule.severity} /></td>
                   <td>{rule.threshold}</td>
                   <td>{rule.description}</td>
+                  <td><Techniques items={rule.mitre} /></td>
                 </tr>
               ))}
             </tbody>

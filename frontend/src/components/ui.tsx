@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { Notice } from '../types'
+import type { Notice, Technique } from '../types'
 
 export function Severity({ value }: { value: string }) {
   return (
@@ -46,5 +46,25 @@ export function PageHead(props: { title: string; lede?: ReactNode; actions?: Rea
       </div>
       {props.actions && <div className="page-actions">{props.actions}</div>}
     </header>
+  )
+}
+
+export function Techniques({ items }: { items?: Technique[] }) {
+  if (!items || items.length === 0) return <span className="muted">—</span>
+  return (
+    <>
+      {items.map((technique) => (
+        <a
+          key={technique.id}
+          className="technique"
+          href={`https://attack.mitre.org/techniques/${technique.id.replace('.', '/')}/`}
+          target="_blank"
+          rel="noreferrer"
+          title={technique.tactic}
+        >
+          <span className="mono">{technique.id}</span> {technique.name}
+        </a>
+      ))}
+    </>
   )
 }

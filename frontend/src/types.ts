@@ -9,6 +9,8 @@ export type EventRecord = {
   details?: Record<string, unknown>
 }
 
+export type Technique = { id: string; name: string; tactic: string }
+
 export type Alert = {
   id: string
   rule_id: string
@@ -20,6 +22,7 @@ export type Alert = {
   created_at: string
   threshold?: string | null
   explanation?: string | null
+  mitre?: Technique[]
 }
 
 export type Incident = {
@@ -41,6 +44,7 @@ export type Rule = {
   min_failures: number
   threshold: string
   description: string
+  mitre?: Technique[]
 }
 
 export type Scenario = {
@@ -60,6 +64,7 @@ export type LoadResult = {
   event_count: number
   alert_count: number
   incident_count: number
+  skipped_lines?: number
 }
 
 export type Notice = { kind: 'ok' | 'error'; text: string }
