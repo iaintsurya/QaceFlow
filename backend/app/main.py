@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .engine import RULES, correlate, detect
 from .ingest import validate_events
+from .parsers import MAX_LOG_BYTES, SSHD_FORMAT, parse_sshd_auth_log
 from .reporting import build_markdown_report
 from .scenarios import SCENARIOS, get_scenario, list_scenarios
 
@@ -256,10 +257,57 @@ def _replay_scenario(scenario_id: str) -> dict[str, Any]:
     }
 
 
+def _rejected(message: str, field: str, status_code: int = 422) -> HTTPException:
+    return HTTPException(
+        status_code=status_code,
+        detail={
+            "message": message,
+            "errors": [{"index": None, "field": field, "message": message}],
+            "error_count": 1,
+        },
+    )
+
+
+def _events_from_log(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], int]:
+    """Turn an uploaded log file into raw events. Returns (events, skipped_lines)."""
+    text = payload.get("text")
+    if not isinstance(text, str) or not text.strip():
+        raise _rejected("'text' must contain the log file contents", "text")
+    if len(text.encode("utf-8", errors="ignore")) > MAX_LOG_BYTES:
+        raise _rejected(f"Log files are limited to {MAX_LOG_BYTES // 1_000_000} MB", "text", 413)
+
+    year = payload.get("year", datetime.now(timezone.utc).year)
+    if isinstance(year, bool) or not isinstance(year, int) or not 2000 <= year <= 2100:
+        raise _rejected("'year' must be a whole year between 2000 and 2100", "year")
+
+    parsed = parse_sshd_auth_log(text, year)
+    if not parsed["events"]:
+        raise _rejected(
+            "No sshd login events (Failed/Accepted) were found in this log. "
+            "Check that it is an OpenSSH auth.log or secure file.",
+            "text",
+        )
+    return parsed["events"], parsed["skipped_lines"]
+
+
 @app.post("/api/events/import")
 def import_events(payload: dict[str, Any]) -> dict[str, Any]:
-    """Validate and import analyst-supplied events, replacing the active dataset."""
-    events, errors = validate_events(payload.get("events"))
+    """Validate and import events, replacing the active dataset.
+
+    Accepts either ``{"events": [...]}`` or a log file:
+    ``{"format": "sshd-auth-log", "text": "...", "year": 2026}``.
+    """
+    log_format = payload.get("format")
+    skipped_lines: int | None = None
+
+    if log_format is None:
+        raw_events = payload.get("events")
+    elif log_format == SSHD_FORMAT:
+        raw_events, skipped_lines = _events_from_log(payload)
+    else:
+        raise _rejected(f"Unsupported format. Supported: {SSHD_FORMAT}", "format")
+
+    events, errors = validate_events(raw_events)
     if errors:
         raise HTTPException(
             status_code=422,
@@ -271,13 +319,16 @@ def import_events(payload: dict[str, Any]) -> dict[str, Any]:
         )
 
     alerts, incidents = _store_dataset(events)
-    return {
+    result: dict[str, Any] = {
         "event_count": len(events),
         "alert_count": len(alerts),
         "incident_count": len(incidents),
         "message": "Events imported. The active dataset and its notes were replaced.",
         "reset_notes": True,
     }
+    if skipped_lines is not None:
+        result["skipped_lines"] = skipped_lines
+    return result
 
 
 @app.post("/api/scenarios/suspicious-login/replay")
