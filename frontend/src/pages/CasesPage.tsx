@@ -23,7 +23,9 @@ export default function CasesPage({ incidents, alerts, events }: Props) {
         lede={
           events.length === 0
             ? 'Nothing loaded yet.'
-            : `${plural(incidents.length, 'case')} (${open} not closed) · ${plural(alerts.length, 'alert')} · ${plural(events.length, 'event')}`
+            : incidents.length === 0
+              ? `No cases · ${plural(alerts.length, 'alert')} · ${plural(events.length, 'event')}`
+              : `${plural(incidents.length, 'case')} (${open} not closed) · ${plural(alerts.length, 'alert')} · ${plural(events.length, 'event')}`
         }
       />
 

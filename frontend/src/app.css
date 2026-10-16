@@ -86,6 +86,7 @@ p.muted { font-size: 14px; }
 .grid td { padding: 11px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
 .grid th:first-child, .grid td:first-child { padding-left: 0; }
 .grid .num { text-align: right; font-variant-numeric: tabular-nums; }
+.grid td.mono, .grid td a.mono { white-space: nowrap; }
 .grid .muted { margin-top: 1px; }
 .row-link { cursor: pointer; }
 .row-link:hover td { background: var(--wash); }
