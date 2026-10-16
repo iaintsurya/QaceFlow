@@ -107,6 +107,7 @@ def decode_alert(row: sqlite3.Row) -> dict[str, Any]:
         "created_at": row["created_at"],
         "threshold": rule.get("threshold"),
         "explanation": rule.get("description"),
+        "mitre": rule.get("mitre", []),
     }
 
 

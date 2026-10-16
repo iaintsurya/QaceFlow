@@ -1,6 +1,15 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+# MITRE ATT&CK references. The mapping is indicative: it tells an analyst which
+# adversary behaviour a rule is designed to surface, not that the behaviour occurred.
+BRUTE_FORCE = {"id": "T1110", "name": "Brute Force", "tactic": "Credential Access"}
+VALID_ACCOUNTS = {
+    "id": "T1078",
+    "name": "Valid Accounts",
+    "tactic": "Defense Evasion, Persistence, Privilege Escalation, Initial Access",
+}
+
 # Rule catalogue. Thresholds live here so the detection code, the API and the
 # investigation report all describe a rule the same way.
 RULES: dict[str, dict[str, Any]] = {
@@ -18,6 +27,7 @@ RULES: dict[str, dict[str, Any]] = {
             "guessing, but can also come from a misconfigured service or a "
             "user mistyping a password."
         ),
+        "mitre": [BRUTE_FORCE],
     },
     "AUTH-002": {
         "name": "Failed logins followed by success",
@@ -33,6 +43,7 @@ RULES: dict[str, dict[str, Any]] = {
             "credential was accepted, or simply that the user corrected a "
             "typo. Verify with the account owner."
         ),
+        "mitre": [BRUTE_FORCE, VALID_ACCOUNTS],
     },
 }
 

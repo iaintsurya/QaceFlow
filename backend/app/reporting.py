@@ -86,6 +86,11 @@ def build_markdown_report(snapshot: dict[str, Any]) -> str:
             lines += [f"- Rule threshold: {alert['threshold']}"]
         if alert.get("explanation"):
             lines += [f"- Why it matters: {alert['explanation']}"]
+        if alert.get("mitre"):
+            techniques = "; ".join(
+                f"{t['id']} {t['name']} ({t['tactic']})" for t in alert["mitre"]
+            )
+            lines += [f"- MITRE ATT&CK (indicative): {techniques}"]
         lines += [
             f"- Evidence references: {', '.join(alert['matched_event_ids'])}",
             "",
