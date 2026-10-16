@@ -15,10 +15,6 @@ The current version offers three deterministic synthetic authentication scenario
 
 ## Screenshots
 
-**Case**: one investigation, with the reason alerts were grouped, each rule's threshold and rationale, and a chronological evidence timeline.
-
-![Case](docs/screenshots/case.png)
-
 **Cases**: candidate incidents with severity, status and affected account, plus the latest alerts. The header shows that this dataset is imported and unverified.
 
 ![Cases](docs/screenshots/cases.png)
