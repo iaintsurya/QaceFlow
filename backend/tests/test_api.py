@@ -192,3 +192,16 @@ def test_imported_report_is_labelled_as_imported(local_database):
     body = main.export_incident_report_markdown(incident_id).body.decode()
 
     assert "Imported data" in body
+
+
+def test_alerts_and_rules_expose_mitre_techniques(local_database):
+    assert main.list_alerts()[0]["mitre"][0]["id"] == "T1110"
+    assert all(rule["mitre"] for rule in main.list_rules())
+
+
+def test_markdown_report_includes_mitre_mapping(local_database):
+    incident_id = main.list_incidents()[0]["id"]
+
+    body = main.export_incident_report_markdown(incident_id).body.decode()
+
+    assert "T1110" in body and "T1078" in body

@@ -286,3 +286,13 @@ def test_correlation_reason_names_the_rules_and_entities():
     assert "AUTH-001" in reason and "AUTH-002" in reason
     assert "host-1" in reason and "alice" in reason
     assert "not proof" in reason
+
+
+def test_every_rule_maps_to_a_mitre_attack_technique():
+    import re
+
+    for rule_id, rule in RULES.items():
+        assert rule["mitre"], rule_id
+        for technique in rule["mitre"]:
+            assert re.fullmatch(r"T\d{4}(\.\d{3})?", technique["id"])
+            assert technique["name"] and technique["tactic"]

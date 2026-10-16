@@ -99,3 +99,12 @@ def test_report_timestamps_are_whole_second_utc():
 
     assert "| Report generated (UTC) | 2026-10-15T19:39:30Z |" in report
     assert "_Notes last saved (UTC): 2026-10-14T11:00:00Z_" in report
+
+
+def test_report_lists_mitre_attack_techniques_as_indicative():
+    alert = {**snapshot()["alerts"][0],
+             "mitre": [{"id": "T1110", "name": "Brute Force", "tactic": "Credential Access"}]}
+
+    report = build_markdown_report(snapshot(alerts=[alert]))
+
+    assert "MITRE ATT&CK (indicative): T1110 Brute Force (Credential Access)" in report
