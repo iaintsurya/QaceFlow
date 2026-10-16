@@ -53,6 +53,19 @@ The "suspicious login" scenario has six events for `demo-user` on `lab-workstati
 - **AUTH-002** looks for a success preceded by at least one failure within 5 minutes. Event 6 succeeds 20 seconds after event 5, so it fires: `ALT-AUTH-002-01` (high).
 - **Correlation:** both alerts share `lab-workstation-01` and `demo-user`, so they are grouped into `INC-0001`. The case is *high* because one of its alerts is high.
 
+## 3b. Real data: importing an auth.log
+
+The demo scenarios are made up, but QaceFlow can also read a real Linux login log. On Linux, the SSH server writes lines like these to `/var/log/auth.log`:
+
+```
+Oct 14 03:12:15 web-01 sshd[2213]: Failed password for root from 203.0.113.50 port 51122 ssh2
+Oct 14 03:12:52 web-01 sshd[2230]: Accepted password for root from 203.0.113.50 port 51210 ssh2
+```
+
+`parsers.py` reads each line with a pattern (a regular expression), keeps the "Failed" and "Accepted" ones and turns them into the same events the rules already understand. Everything else (cron jobs, package updates, session messages) is counted as "skipped". Because syslog lines have no year, you type the year in, and times are treated as UTC. Try it: choose **Linux auth.log** on the Data page and load `docs/sample-auth.log`. It produces 2 alerts and 1 case for `root` on `web-01`.
+
+**MITRE ATT&CK** is a public catalogue of attacker behaviours. Each QaceFlow rule points at the behaviour it is meant to catch (for example T1110 Brute Force) so a reader can look it up. It is a pointer, not a verdict.
+
 ## 4. What happens when you click "Replay scenario"
 
 1. **Browser:** `DataPage.tsx` calls `replayScenario()` from `api.ts`, which sends `POST /api/scenarios/suspicious-login/replay`. If cases already exist, it first asks for confirmation, because replay wipes notes.
@@ -70,6 +83,7 @@ Notes and reports follow the same pattern: the browser asks, the server reads or
 - `engine.py`: the brain. `RULES` documents each rule. `detect()` finds alerts. `correlate()` groups them. It never touches the database or the network, so it is easy to test.
 - `scenarios.py`: three made-up datasets (suspicious login, repeated failures, benign logins).
 - `ingest.py`: checks imported JSON and rejects the whole file if any record is bad.
+- `parsers.py`: reads real OpenSSH `auth.log` lines and turns login attempts into events.
 - `reporting.py`: turns a saved case into Markdown.
 - `main.py`: the web API and the SQLite code.
 
@@ -80,7 +94,7 @@ Notes and reports follow the same pattern: the browser asks, the server reads or
 - `components/`: the top bar and small shared pieces.
 - `app.css`: the whole visual design, built from a few colour and font variables.
 
-**Tests (`backend/tests/`)**: 63 tests. They are the safety net; if you change a rule and a test fails, the test is telling you what you changed.
+**Tests (`backend/tests/`)**: 80 tests. They are the safety net; if you change a rule and a test fails, the test is telling you what you changed.
 
 ## 6. Run it and poke it
 
@@ -138,7 +152,7 @@ Open http://127.0.0.1:5173. API docs are at http://127.0.0.1:8000/docs, which is
 7. **Why generate the report on the server?**
    So it always reflects the saved investigation. A report built from browser state could contain unsaved or tampered data.
 8. **How is the project tested?**
-   63 tests cover rules, boundaries, correlation, the API, imports and reports, run automatically by GitHub Actions along with the frontend build.
+   80 tests cover rules, boundaries, correlation, the API, imports and reports, run automatically by GitHub Actions along with the frontend build.
 9. **What are the limitations?**
    Two authentication rules only, correlation by host and account only, no authentication, local use. The report documents these openly.
 10. **What would you build next?**

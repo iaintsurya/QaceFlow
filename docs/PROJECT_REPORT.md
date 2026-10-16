@@ -1,6 +1,6 @@
 # QaceFlow: Project Report
 
-**Version 0.2.0 · Open-source security investigation workbench**
+**Version 0.3.0 · Open-source security investigation workbench**
 Repository: https://github.com/iaintsurya/QaceFlow
 
 ## 1. Summary
@@ -61,7 +61,7 @@ Every page and endpoint supports this workflow.
 | Frontend | React, TypeScript, Vite | Cases, events, alerts, rules, data and case pages; no business logic |
 | API | Python, FastAPI | Request validation, predictable JSON, HTTP status codes |
 | Detection | Pure Python (`engine.py`) | Rule evaluation and correlation; no I/O, so fully unit-testable |
-| Ingestion | Pure Python (`ingest.py`) | Validation and normalisation of imported events |
+| Ingestion | Pure Python (`ingest.py`, `parsers.py`) | Validation of imported events and parsing of OpenSSH `auth.log` files |
 | Reporting | Pure Python (`reporting.py`) | Builds the Markdown report from a stored snapshot |
 | Persistence | SQLite | Events, alerts, cases, analyst notes |
 | CI | GitHub Actions | Backend tests and frontend production build on every push |
@@ -76,6 +76,7 @@ Design principle: **the server is the source of truth.** The report is generated
 | `app/engine.py` | Rule catalogue, `detect()`, `correlate()` |
 | `app/scenarios.py` | Three deterministic synthetic scenarios |
 | `app/ingest.py` | All-or-nothing validation of imported events |
+| `app/parsers.py` | Parser for OpenSSH `auth.log` lines |
 | `app/reporting.py` | Markdown report generator |
 
 ### Frontend modules
@@ -103,16 +104,16 @@ Timestamps are stored in UTC. The `source` column records provenance: `simulated
 
 Rules are defined in one catalogue (`RULES`) so the engine, the API and the report all describe a rule identically.
 
-| Rule | Severity | Triggers when | Why it matters (and what could be innocent) |
-|---|---|---|---|
-| **AUTH-001** Repeated authentication failures | Medium | 5 or more failed logins for the same host and account within 120 seconds | Possible password guessing; could be a misconfigured service or a mistyped password |
-| **AUTH-002** Failed logins followed by success | High | A successful login preceded by at least 1 failed login for the same host and account within 5 minutes | A guessed or reused credential may have been accepted; could be a corrected typo |
+| Rule | Severity | Triggers when | Why it matters (and what could be innocent) | MITRE ATT&CK (indicative) |
+|---|---|---|---|---|
+| **AUTH-001** Repeated authentication failures | Medium | 5 or more failed logins for the same host and account within 120 seconds | Possible password guessing; could be a misconfigured service or a mistyped password | T1110 Brute Force |
+| **AUTH-002** Failed logins followed by success | High | A successful login preceded by at least 1 failed login for the same host and account within 5 minutes | A guessed or reused credential may have been accepted; could be a corrected typo | T1110 Brute Force, T1078 Valid Accounts |
 
 **Properties**
 - *Deterministic:* the same events always produce the same alerts, regardless of input order (events are sorted before evaluation).
 - *Burst-aware:* `AUTH-001` uses a sliding window and finds every separate burst, not only the first.
 - *Unique, stable alert IDs:* `ALT-<rule>-<nn>`, for example `ALT-AUTH-001-01`.
-- *Explainable:* each alert carries its threshold, rationale and matched event IDs.
+- *Explainable:* each alert carries its threshold, rationale, matched event IDs and an indicative MITRE ATT&CK reference (T1110 Brute Force; T1078 Valid Accounts for `AUTH-002`). The mapping says which adversary behaviour a rule is designed to surface, not that the behaviour occurred.
 
 ## 9. Correlation
 
@@ -121,6 +122,8 @@ Alerts that share the same **host and account** are grouped. Two or more alerts 
 ## 10. Ingestion and validation
 
 Analysts can import their own events as JSON. Validation checks required fields (`event_id`, `timestamp`, `event_type`, `host`, `user`), ISO 8601 timestamps (converted to UTC), IP address format, duplicate event IDs, field lengths, and a 5,000-event limit. The import is **all-or-nothing**: one invalid record rejects the file and nothing is stored, and up to 25 problems are returned with record numbers. Imported events are labelled `imported`, and the interface and reports describe them as unverified.
+
+**Real logs.** A Linux OpenSSH `auth.log` (or `secure`) file can be imported directly. The parser turns `Failed <method> for …` and `Accepted <method> for …` lines into `authentication.failure` and `authentication.success` events, handles `invalid user` attempts, single-digit days and IPv6 addresses, skips impossible dates instead of failing, keeps the original line (truncated to 500 characters) as evidence, and reports how many lines were skipped. Syslog carries no year or time zone, so the year is supplied by the analyst and times are treated as UTC. The parsed events go through the same validation as JSON imports.
 
 ## 11. Investigation and reporting
 
@@ -153,14 +156,15 @@ Accessibility measures: visible keyboard focus, semantic tables, labelled contro
 
 ## 14. Testing and quality
 
-63 automated tests run on every push in GitHub Actions, alongside the frontend production build.
+80 automated tests run on every push in GitHub Actions, alongside the frontend production build.
 
 | Suite | Tests | Covers |
 |---|---|---|
-| `test_engine.py` | 24 | Window boundaries (exactly 120 s and 121 s, exactly 5 minutes), repeated bursts, unique IDs, input-order independence, different hosts, correlation |
-| `test_api.py` | 19 | Replay, notes, status, reports, restart persistence, import, rejected imports, 404 and 413 paths |
+| `test_engine.py` | 25 | Window boundaries (exactly 120 s and 121 s, exactly 5 minutes), repeated bursts, unique IDs, input-order independence, different hosts, correlation |
+| `test_api.py` | 25 | Replay, notes, status, reports, restart persistence, import, rejected imports, 404 and 413 paths |
 | `test_ingest.py` | 8 | Required fields, timestamps, IPs, duplicates, limits, UTC conversion |
-| `test_reporting.py` | 7 | Metadata, ordering, escaping, empty states, imported-data labelling |
+| `test_reporting.py` | 9 | Metadata, ordering, escaping, empty states, imported-data labelling |
+| `test_parsers.py` | 8 | Failed and accepted logins, invalid users, skipped lines, IPv6, impossible dates, raw-line truncation, and an end-to-end run on the sample log |
 | `test_scenarios.py` | 5 | Determinism and expected scenario outcomes |
 
 ## 15. Security and privacy
@@ -177,7 +181,7 @@ The project was built in small, tested batches with meaningful commits. Verifica
 
 ## 17. Known limitations
 
-- Detection covers authentication events only, with two threshold rules.
+- Detection covers authentication events only, with two threshold rules, and the only real log format supported is OpenSSH `auth.log`.
 - `AUTH-002` fires after a single failure followed by a success, so it can flag a simple typo.
 - Correlation groups only by shared host and account.
 - No authentication or multi-user support; intended for local use.
@@ -187,8 +191,8 @@ The project was built in small, tested batches with meaningful commits. Verifica
 ## 18. Future work
 
 1. Evidence relationship graph linking events, accounts, hosts, IPs, alerts and cases.
-2. Additional rules (new source IP, impossible travel, off-hours logins) with false-positive tests.
-3. CSV import and richer event filters.
+2. Additional rules with false-positive tests: password spraying (one source IP against many accounts), a new source IP for an account, off-hours logins; plus correlation by source IP.
+3. More log formats (Windows security events, web server logs), CSV import and richer event filters.
 4. Per-case checklists and annotated evidence.
 5. PDF report export.
 6. Optional authentication for shared deployments.

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+### Added
+- Import of real Linux OpenSSH `auth.log` files (failed and accepted logins) through the existing import endpoint and the Data page, with skipped-line reporting and the original log line kept as evidence.
+- MITRE ATT&CK references on every rule, shown on the Rules, Alerts and Case pages and in exported reports (indicative mapping).
+- `docs/sample-auth.log`, a sample log containing a brute-force sequence.
+- The `LICENSE` file (MIT) that the README already referenced.
+- 17 further automated tests (80 in total).
+
 ## 0.2.0
 
 ### Added

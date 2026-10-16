@@ -4,7 +4,7 @@
 
 QaceFlow is a local-first cybersecurity project designed to explore how security events can be transformed into actionable alerts and candidate incidents. It combines simulated authentication telemetry, rule-based detection, basic alert correlation, and a case-oriented investigation interface.
 
-> **Project status:** Early development · v0.2.0  
+> **Project status:** Early development · v0.3.0  
 > **Environment:** Local development with synthetic telemetry
 
 ## Overview
@@ -50,6 +50,8 @@ A sample exported report is in [`docs/sample-report.md`](docs/sample-report.md),
 - **Persistent analyst notes:** Save investigation notes to SQLite and reload them later.
 - **Incident lifecycle:** Change incident status between open, investigating and closed.
 - **Report export:** Download a Markdown report containing incident metadata, analyst notes, related alerts and evidence references.
+- **Real log import:** Analyse a Linux OpenSSH `auth.log` (failed and accepted logins), with the original log line kept as evidence.
+- **MITRE ATT&CK mapping:** Each rule references the adversary technique it is designed to surface (indicative, not a verdict).
 - **Local-first development:** Run the frontend and API on your own machine using synthetic data.
 
 ## Interface
@@ -109,10 +111,10 @@ Synthetic authentication scenario
 
 ## Detection rules
 
-| Rule ID | Detection | Purpose |
-|---|---|---|
-| `AUTH-001` | Repeated authentication failures | Detect five or more failures for the same host and account within a 120-second window. |
-| `AUTH-002` | Failures followed by success | Identify a successful login preceded by failures for the same host and account within five minutes. |
+| Rule ID | Detection | Purpose | ATT&CK (indicative) |
+|---|---|---|---|
+| `AUTH-001` | Repeated authentication failures | Detect five or more failures for the same host and account within a 120-second window. | T1110 Brute Force |
+| `AUTH-002` | Failures followed by success | Identify a successful login preceded by failures for the same host and account within five minutes. | T1110 Brute Force, T1078 Valid Accounts |
 
 These rules are intentionally simple and explainable. A rule match is an investigative signal, not proof of malicious activity.
 
@@ -179,7 +181,7 @@ Replaying the scenario resets the local demo dataset and regenerates the synthet
 | GET | `/api/incidents` | List candidate incidents |
 | GET | `/api/rules` | List detection rules with thresholds and explanations |
 | GET | `/api/scenarios` | List the synthetic demo scenarios |
-| POST | `/api/events/import` | Validate and import a JSON array of events (all-or-nothing; replaces the active dataset) |
+| POST | `/api/events/import` | Validate and import events as `{"events": [...]}` or an OpenSSH log as `{"format": "sshd-auth-log", "text": "...", "year": 2026}` (all-or-nothing; replaces the active dataset) |
 | POST | `/api/scenarios/{scenario_id}/replay` | Replay a scenario (resets events, alerts, incidents and notes) |
 | GET / PUT | `/api/incidents/{id}/notes` | Read or save analyst notes (max 20,000 characters) |
 | PUT | `/api/incidents/{id}/status` | Set status to `open`, `investigating` or `closed` |
@@ -195,7 +197,7 @@ Alert IDs are unique and stable, in the form `ALT-<rule>-<nn>` (for example `ALT
 - [x] Add persistent analyst notes and investigation findings.
 - [x] Improve evidence timelines and event inspection.
 - [x] Add investigation report export (Markdown).
-- [x] Support validated imports of authorized, sanitized telemetry (JSON).
+- [x] Support validated imports of authorized, sanitized telemetry (JSON and Linux auth.log).
 - [ ] Add versioned detection-rule definitions.
 - [ ] Improve API security and deployment readiness.
 
@@ -251,6 +253,15 @@ Use the **Import events** panel in the UI, or call the API directly with a JSON 
 | `details` | no | Free-form object |
 
 Imports are all-or-nothing: if any record is invalid, nothing is stored and up to 25 problems are returned. Imported events are labelled `imported` and reports describe them as unverified. Up to 5,000 events can be imported at once. Importing replaces the active dataset and clears notes, like scenario replay.
+
+### Linux auth.log
+
+Choose **Linux auth.log (OpenSSH)** as the format on the Data page, or send `{"format": "sshd-auth-log", "text": "<file contents>", "year": 2026}` to the same endpoint. A ready-made example is in [`docs/sample-auth.log`](docs/sample-auth.log): a burst of failed logins against `root` followed by a successful one, mixed with ordinary log noise.
+
+- Only `Failed <method> for ...` and `Accepted <method> for ...` lines from `sshd` become events; everything else is skipped and the number of skipped lines is reported.
+- Syslog lines carry no year or time zone, so you supply the year and times are treated as UTC.
+- The original log line is stored in the event details and shown as evidence.
+- Files up to 5 MB and 5,000 login events are accepted. Use only logs you are authorised to analyse.
 
 ## Continuous integration
 
