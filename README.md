@@ -1,17 +1,20 @@
 # QaceFlow
 
+[![CI](https://github.com/iaintsurya/QaceFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/iaintsurya/QaceFlow/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 **An open-source security investigation workbench for explainable detections and incident correlation.**
 
-QaceFlow is a local-first cybersecurity project designed to explore how security events can be transformed into actionable alerts and candidate incidents. It combines simulated authentication telemetry, rule-based detection, basic alert correlation, and a case-oriented investigation interface.
+QaceFlow is a local-first cybersecurity project designed to explore how security events can be transformed into actionable alerts and candidate incidents. It combines authentication telemetry (synthetic scenarios or your own logs), rule-based detection, basic alert correlation, and a case-oriented investigation interface.
 
 > **Project status:** Early development · v0.3.0  
-> **Environment:** Local development with synthetic telemetry
+> **Environment:** Local development, with synthetic scenarios or your own imported logs
 
 ## Overview
 
 Security investigations often involve connecting individual events, understanding why detection rules fired, and documenting the evidence behind an incident. QaceFlow explores this workflow through a small, transparent, and reproducible security lab.
 
-The current version offers three deterministic synthetic authentication scenarios, evaluates detection rules, correlates related alerts, and presents results as cases, events, alerts and rules in a web interface.
+The current version offers three deterministic synthetic scenarios and imports of your own JSON or Linux `auth.log` data, evaluates detection rules, correlates related alerts, and presents results as cases, events, alerts and rules in a web interface.
 
 ## Screenshots
 
@@ -27,7 +30,7 @@ The current version offers three deterministic synthetic authentication scenario
 
 ![Events](docs/screenshots/events.png)
 
-**Data**: replay a synthetic scenario or import your own validated JSON events.
+**Data**: replay a synthetic scenario or import validated JSON events or a Linux `auth.log`.
 
 ![Data](docs/screenshots/data.png)
 
@@ -52,7 +55,7 @@ A sample exported report is in [`docs/sample-report.md`](docs/sample-report.md),
 - **Report export:** Download a Markdown report containing incident metadata, analyst notes, related alerts and evidence references.
 - **Real log import:** Analyse a Linux OpenSSH `auth.log` (failed and accepted logins), with the original log line kept as evidence.
 - **MITRE ATT&CK mapping:** Each rule references the adversary technique it is designed to surface (indicative, not a verdict).
-- **Local-first development:** Run the frontend and API on your own machine using synthetic data.
+- **Local-first development:** Run the frontend and API on your own machine using synthetic scenarios or your own logs.
 
 ## Interface
 
@@ -148,6 +151,13 @@ If the `python` command is unavailable, use `.\.venv\Scripts\python.exe` in its 
 
 The API runs at `http://127.0.0.1:8000`.
 
+To run the tests, install the development requirements and run pytest from the `backend` folder:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m pytest
+```
+
 Interactive API documentation: `http://127.0.0.1:8000/docs`
 
 ### 3. Set up the frontend
@@ -164,68 +174,12 @@ Open the local URL printed by Vite, usually `http://localhost:5173`.
 
 ### 4. Run the demo
 
-1. Ensure both the backend and frontend are running.
-2. Open QaceFlow in your browser.
-3. Select **Run demo scenario**.
-4. Review the generated events, detection alerts, and candidate incident.
+1. Make sure the backend and the frontend are both running, then open QaceFlow in your browser.
+2. Open the **Data** page, keep **Suspicious login** selected and choose **Replay scenario**.
+3. You land on **Cases** with one candidate case. Open it to see why its alerts were grouped, each rule's threshold and rationale, and the evidence timeline.
+4. Record your findings, set a status and choose **Export report**.
 
-Replaying the scenario resets the local demo dataset and regenerates the synthetic events.
-
-## API endpoints
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| GET | `/api/health` | Check API health |
-| GET | `/api/events` | List generated events |
-| GET | `/api/alerts` | List detection alerts |
-| GET | `/api/incidents` | List candidate incidents |
-| GET | `/api/rules` | List detection rules with thresholds and explanations |
-| GET | `/api/scenarios` | List the synthetic demo scenarios |
-| POST | `/api/events/import` | Validate and import events as `{"events": [...]}` or an OpenSSH log as `{"format": "sshd-auth-log", "text": "...", "year": 2026}` (all-or-nothing; replaces the active dataset) |
-| POST | `/api/scenarios/{scenario_id}/replay` | Replay a scenario (resets events, alerts, incidents and notes) |
-| GET / PUT | `/api/incidents/{id}/notes` | Read or save analyst notes (max 20,000 characters) |
-| PUT | `/api/incidents/{id}/status` | Set status to `open`, `investigating` or `closed` |
-| GET | `/api/incidents/{id}/report` | Authoritative JSON snapshot of the saved investigation |
-| GET | `/api/incidents/{id}/report.md` | Download the investigation report as Markdown |
-
-Alert IDs are unique and stable, in the form `ALT-<rule>-<nn>` (for example `ALT-AUTH-001-01`).
-
-## Project roadmap
-
-- [x] Add automated tests for detection and correlation logic.
-- [x] Build a dedicated incident investigation page.
-- [x] Add persistent analyst notes and investigation findings.
-- [x] Improve evidence timelines and event inspection.
-- [x] Add investigation report export (Markdown).
-- [x] Support validated imports of authorized, sanitized telemetry (JSON and Linux auth.log).
-- [ ] Add versioned detection-rule definitions.
-- [ ] Improve API security and deployment readiness.
-
-## Security and limitations
-
-QaceFlow is an educational development project, not a production SIEM or incident-response platform.
-
-- The included scenario uses synthetic telemetry.
-- Detection and correlation logic is intentionally basic.
-- The development API does not include authentication.
-- The replay endpoint resets the local demo dataset, including saved notes and incident status.
-- `AUTH-002` fires after a single failure followed by a success, so it can flag a simple typo; the threshold lives in `RULES` in `engine.py`.
-- Correlation groups alerts only by shared host and account.
-- The application should remain on localhost and must not be exposed publicly in its current state.
-
-Do not import sensitive logs or real incident evidence into this development version.
-
-## Contributing
-
-Contributions, bug reports, and suggestions are welcome. Please open an issue to discuss significant changes before submitting a pull request.
-
-## License
-
-Released under the [MIT License](LICENSE).
-
----
-
-**QaceFlow** — From security signals to evidence-backed investigations.
+Replaying a scenario resets the local dataset, including saved notes and status.
 
 ## Demo scenarios
 
@@ -263,6 +217,64 @@ Choose **Linux auth.log (OpenSSH)** as the format on the Data page, or send `{"f
 - The original log line is stored in the event details and shown as evidence.
 - Files up to 5 MB and 5,000 login events are accepted. Use only logs you are authorised to analyse.
 
-## Continuous integration
+## API endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/health` | Check API health |
+| GET | `/api/events` | List generated events |
+| GET | `/api/alerts` | List detection alerts |
+| GET | `/api/incidents` | List candidate incidents |
+| GET | `/api/rules` | List detection rules with thresholds and explanations |
+| GET | `/api/scenarios` | List the synthetic demo scenarios |
+| POST | `/api/events/import` | Validate and import events as `{"events": [...]}` or an OpenSSH log as `{"format": "sshd-auth-log", "text": "...", "year": 2026}` (all-or-nothing; replaces the active dataset) |
+| POST | `/api/scenarios/{scenario_id}/replay` | Replay a scenario (resets events, alerts, incidents and notes) |
+| GET / PUT | `/api/incidents/{id}/notes` | Read or save analyst notes (max 20,000 characters) |
+| PUT | `/api/incidents/{id}/status` | Set status to `open`, `investigating` or `closed` |
+| GET | `/api/incidents/{id}/report` | Authoritative JSON snapshot of the saved investigation |
+| GET | `/api/incidents/{id}/report.md` | Download the investigation report as Markdown |
+
+Alert IDs are unique and stable, in the form `ALT-<rule>-<nn>` (for example `ALT-AUTH-001-01`).
+
+## Testing and continuous integration
 
 GitHub Actions runs the backend tests and the frontend production build on every push and pull request (`.github/workflows/ci.yml`). Locally: `pip install -r backend/requirements-dev.txt && python -m pytest` in `backend`, and `npm run build` in `frontend`.
+
+## Project roadmap
+
+- [x] Add automated tests for detection and correlation logic.
+- [x] Build a dedicated incident investigation page.
+- [x] Add persistent analyst notes and investigation findings.
+- [x] Improve evidence timelines and event inspection.
+- [x] Add investigation report export (Markdown).
+- [x] Support validated imports of authorized, sanitized telemetry (JSON and Linux auth.log).
+- [ ] Password-spraying rule and correlation by source IP.
+- [ ] Frontend unit tests.
+- [ ] Add versioned detection-rule definitions.
+- [ ] Improve API security and deployment readiness.
+
+## Security and limitations
+
+QaceFlow is an educational development project, not a production SIEM or incident-response platform.
+
+- The built-in scenarios use synthetic telemetry. Imported data is labelled unverified throughout the interface and in reports.
+- Detection and correlation logic is intentionally basic.
+- The development API does not include authentication.
+- The replay endpoint resets the local demo dataset, including saved notes and incident status.
+- `AUTH-002` fires after a single failure followed by a success, so it can flag a simple typo; the threshold lives in `RULES` in `engine.py`.
+- Correlation groups alerts only by shared host and account.
+- The application should remain on localhost and must not be exposed publicly in its current state.
+
+Only import logs you are authorised to analyse, and prefer sanitized samples. There is no authentication and data is stored unencrypted in a local SQLite file. To report a vulnerability in QaceFlow itself, see [`SECURITY.md`](SECURITY.md).
+
+## Contributing
+
+Contributions, bug reports, and suggestions are welcome. Please open an issue to discuss significant changes before submitting a pull request. Setup, test and commit conventions are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## License
+
+Released under the [MIT License](LICENSE).
+
+---
+
+**QaceFlow** — From security signals to evidence-backed investigations.
