@@ -27,6 +27,19 @@ npm run build
 
 The Rules page, alert explanations and exported reports pick up the new rule automatically from the catalogue.
 
+## Manual verification before a release
+
+Automated tests do not cover the whole interface, so before tagging a release:
+
+- [ ] `GET /api/health` returns `status: ok`.
+- [ ] Each scenario on the **Data** page loads and the counts match the table in the README.
+- [ ] `docs/sample-events.json` and `docs/sample-auth.log` (year 2026) import, and the header reads *Imported data · unverified*.
+- [ ] A broken import (for example a timestamp of `yesterday`) is rejected with a clear message and stores nothing.
+- [ ] Findings and case status survive a page reload and a backend restart.
+- [ ] The exported report contains the findings, alerts with thresholds and ATT&CK references, and the evidence timeline.
+- [ ] An unknown case ID returns 404 and an invalid status returns 400.
+- [ ] `python -m pytest` and `npm run build` both pass, and the README commands still match the repository.
+
 ## Pull requests
 
 - Keep changes focused and small enough to review.
